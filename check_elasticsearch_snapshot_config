@@ -1,0 +1,14 @@
+
+object CheckCommand "elasticsearch_snapshot" {
+	import "plugin-check-command"
+
+	command = [ PluginContribDir + "/check_elasticsearch_snapshot" ]
+
+	arguments = {
+		"-s" = "$elasticsearch_snapshot_server$"
+		"-p" = "$elasticsearch_snapshot_port$"
+		"-w" = "$elasticsearch_snapshot_age_warning$"
+		"-c" = "$elasticsearch_snapshot_age_critical$"
+	}
+
+}
