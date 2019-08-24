@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""
+Check for monitoring status and age of Elasticsearch snapshots
+
+MIT License
+
+Copyright (c) 2019 Lee Clemens
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+import argparse
+import sys
+import time
+import traceback
+
+import requests
+
+STATUS_OK = 0
+STATUS_WARNING = 1
+STATUS_CRITICAL = 2
+STATUS_UNKNOWN = 3
+
+PREFIXES = {
+    STATUS_OK: 'OK',
+    STATUS_WARNING: 'WARNING',
+    STATUS_CRITICAL: 'CRITICAL',
+    STATUS_UNKNOWN: 'UNKNOWN'
+}
+
+ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
+
+
+def query(args, qry):
+    req = requests.get('http://{}:{}/{}'.format(args.server, args.port, qry))
+    if req.status_code == 200:
+        return req.json()
+    print('Failed to query: http://{}:{}/{}'.format(args.server, args.port, qry))
+    sys.exit(STATUS_CRITICAL)
+
+
+def check_status(args,
+                 newest_snapshot_time,
+                 newest_snapshot_name,
+                 now):
+    if now - newest_snapshot_time >= args.critical:
+        print('Most recent snapshot {} in repository {}'
+              ' is older than critical threshold {}'.format(newest_snapshot_name,
+                                                            args.repository,
+                                                            args.critical))
+        return STATUS_CRITICAL
+    if now - newest_snapshot_time >= args.warning:
+        print('Most recent snapshot {} in repository {}'
+              ' is older than warning threshold {}'.format(newest_snapshot_name,
+                                                           args.repository,
+                                                           args.warning))
+        return STATUS_WARNING
+    return STATUS_OK
+
+
+def check_repository_status(args, repository, now):
+    newest_snapshot_time = 0
+    newest_snapshot_name = None
+    newest_snapshot_date = None
+    for snapshot in query(args, '_snapshot/{}/_all'.format(repository))['snapshots']:
+        if (snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
+                and snapshot['end_time_in_millis'] > newest_snapshot_time):
+            newest_snapshot_time = snapshot['end_time_in_millis']
+            newest_snapshot_name = snapshot['snapshot']
+            newest_snapshot_date = snapshot['end_time']
+    if newest_snapshot_name:
+        status = check_status(args,
+                              newest_snapshot_time,
+                              newest_snapshot_name,
+                              now)
+        return status, newest_snapshot_time, newest_snapshot_name, newest_snapshot_date
+    print('No snapshots found in repository: {}'.format(repository))
+    return STATUS_UNKNOWN, None, None, None
+
+
+def run(args):
+    return_status = STATUS_OK
+    newest_repository = None
+    newest_snapshot_name = None
+    newest_snapshot_date = None
+    perf_newest_snapshot_seconds = sys.maxsize
+    repositories = [args.repository] if args.repository else []
+    if not repositories:
+        for repository in query(args, '_snapshot/_all'):
+            repositories.append(repository)
+    now = time.time()
+    for repository in repositories:
+        (repo_status,
+         repo_newest_snapshot_seconds,
+         repo_newest_snapshot_name,
+         repo_newest_snapshot_date) = check_repository_status(args, repository, now)
+        if repo_status > return_status:
+            return_status = repo_status
+        if 0 < repo_newest_snapshot_seconds < perf_newest_snapshot_seconds:
+            newest_repository = repository
+            perf_newest_snapshot_seconds = repo_newest_snapshot_seconds
+            newest_snapshot_name = repo_newest_snapshot_name
+            newest_snapshot_date = repo_newest_snapshot_date
+
+    exit_with_perf_data(newest_repository,
+                        newest_snapshot_name,
+                        newest_snapshot_date,
+                        (now * 1000) - perf_newest_snapshot_seconds,
+                        return_status)
+
+
+def exit_with_perf_data(newest_repository,
+                        newest_snapshot_name,
+                        newest_snapshot_date,
+                        perf_newest_seconds,
+                        exit_code):
+    perf_newest_days = perf_newest_seconds / 1000 / 60 / 60 / 24
+    print(
+        '{} - Most current Repository/Snapshot: {}/{} {}'
+        ' | newest_age={}, newest_age_days={}'.format(
+            PREFIXES[exit_code],
+            newest_repository,
+            newest_snapshot_name,
+            newest_snapshot_date,
+            perf_newest_seconds,
+            perf_newest_days))
+    sys.exit(exit_code)
+
+
+def usage():
+    print('Usage: %s -s server -p port -w seconds -c seconds [-r repository]'
+          ' [-t <protocol>]' % sys.argv[0])
+    print('\t-s server      server name')
+    print('\t-p port        port')
+    print('\t-w seconds     warning threshold')
+    print('\t-c seconds     critical threshold')
+    print('\t-r repository  snapshot repository (defaults to _all)')
+    sys.exit(STATUS_UNKNOWN)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser('This plugin checks the Elasticsearch snapshots for either all'
+                                     ' or a specific repository. It will test the age'
+                                     ' of any successful snapshot, using the newest in each repository.')
+    parser.add_argument('-s', '--server', type=str,
+                        required=True,
+                        dest='server',
+                        help='server')
+    parser.add_argument('-p', '--port', type=int,
+                        required=True,
+                        dest='port',
+                        help='port')
+    parser.add_argument('-w', '--warning', type=int,
+                        dest='warning',
+                        required=True,
+                        help='warning seconds')
+    parser.add_argument('-c', '--critical', type=int,
+                        dest='critical',
+                        required=True,
+                        help='critical seconds')
+    parser.add_argument('-r', '--repository', type=str,
+                        dest='repository',
+                        default=None,
+                        required=False,
+                        help='repository')
+    args = parser.parse_args()
+    if args.warning > args.critical:
+        print('Warning must be less than critical')
+        sys.exit(STATUS_CRITICAL)
+    return args
+
+
+if __name__ == '__main__':
+    try:
+        run(parse_args())
+    # pylint: disable=broad-except
+    except Exception as ex:
+        print('%s: Unhandled exception %s' % (sys.argv[0], type(ex)))
+        print(ex)
+        traceback.print_exc()
+        sys.exit(STATUS_CRITICAL)

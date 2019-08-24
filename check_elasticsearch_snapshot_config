@@ -9,6 +9,9 @@ object CheckCommand "elasticsearch_snapshot" {
 		"-p" = "$elasticsearch_snapshot_port$"
 		"-w" = "$elasticsearch_snapshot_age_warning$"
 		"-c" = "$elasticsearch_snapshot_age_critical$"
+		"-r" = "$elasticsearch_snapshot_repository$"
 	}
 
+	vars.elasticsearch_snapshot_server = "localhost"
+	vars.elasticsearch_snapshot_port = 9200
 }
