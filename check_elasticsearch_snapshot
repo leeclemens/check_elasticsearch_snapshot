@@ -126,7 +126,8 @@ def run(args):
                                                               now)
         if repo_status > return_status:
             return_status = repo_status
-        if 0 < repo_newest_snapshot_seconds < perf_newest_snapshot_seconds:
+        if (repo_newest_snapshot_seconds is not None
+                and 0 < repo_newest_snapshot_seconds < perf_newest_snapshot_seconds):
             newest_repository = repository
             perf_newest_snapshot_seconds = repo_newest_snapshot_seconds
             newest_snapshot_name = repo_newest_snapshot_name
