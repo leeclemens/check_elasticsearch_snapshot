@@ -155,7 +155,7 @@ def exit_with_perf_data(newest_repository,
             newest_snapshot_name,
             newest_snapshot_date))
     if newest_snapshot_name:
-        output_str += ' | newest_age={}, newest_age_days={}'.format(
+        output_str += ' | newest_age={},newest_age_days={}'.format(
             perf_newest_seconds,
             perf_newest_days)
     print(output_str)
