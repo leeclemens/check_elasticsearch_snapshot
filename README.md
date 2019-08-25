@@ -23,8 +23,9 @@ By default all Snapshots are checked for status and age. You can also specify a 
 * Add/Import the CheckCommand configuration
 
 ## Usage
-
+```bash
 ./check_elasticsearch_snapshot --help
+```
 
 `[-h] -s SERVER -p PORT -w WARNING -c CRITICAL [-r REPOSITORY]`
 
