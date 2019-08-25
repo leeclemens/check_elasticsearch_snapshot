@@ -164,7 +164,7 @@ def exit_with_perf_data(newest_repository,
 
 def parse_threshold(threshold):
     try:
-        raw_seconds = int(threshold.split('d')[0])
+        raw_seconds = float(threshold.split('d')[0])
         if threshold.endswith('d'):
             raw_seconds = raw_seconds * 60 * 60 * 24
         return raw_seconds

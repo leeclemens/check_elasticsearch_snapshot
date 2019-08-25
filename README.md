@@ -26,6 +26,13 @@ By default all Snapshots are checked for status and age. You can also specify a 
 
 ./check_elasticsearch_snapshot --help
 
+`[-h] -s SERVER -p PORT -w WARNING -c CRITICAL [-r REPOSITORY]`
+
+### Examples
+* `WARNING 3600` is 1 hour
+* `WARNING 1d` is 1 day
+* `WARNING 1.25d` is 1 day and 6 hours
+
 ## Contributing
 1. Fork the repo
   * Create a new feature branch
