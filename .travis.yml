@@ -14,11 +14,13 @@ python:
 before_install:
   - pip freeze
   - travis_retry pip install --upgrade pip
-  - travis_retry pip install --upgrade pep8
-  - travis_retry pip install --upgrade coverage
-  - travis_retry pip install --upgrade coveralls
+  - travis_retry pip install --upgrade pycodestyle
+  - travis_retry pip install --upgrade pylint
+  # - travis_retry pip install --upgrade coverage
+  # - travis_retry pip install --upgrade coveralls
   - pip freeze
 
 
 script:
-  - pep8 -v check_elasticsearch_snapshot
+  - pycodestyle --stastics check_elasticsearch_snapshot
+  - pylint check_elasticsearch_snapshot
