@@ -20,7 +20,6 @@ By default all Snapshots are checked for status and age. You can also specify a 
     * python36-requests.noarch
 ### Plugin Installation
 * Download check_elasticsearch_snapshot to your PluginContribDir
-* Install Python requests package
 * Add/Import the CheckCommand configuration
 
 ## Usage
