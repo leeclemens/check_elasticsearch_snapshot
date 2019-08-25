@@ -29,10 +29,18 @@ By default all Snapshots are checked for status and age. You can also specify a 
 
 `[-h] -s SERVER -p PORT -w WARNING -c CRITICAL [-r REPOSITORY]`
 
-### Examples
+### Thresholds
 * `WARNING 3600` is 1 hour
 * `WARNING 1d` is 1 day
 * `WARNING 1.25d` is 1 day and 6 hours
+
+### Examples
+```bash
+check_elasticsearch_snapshot -s localhost -p 9200 -w 1.1d -c 2d 
+```
+```bash
+check_elasticsearch_snapshot -s localhost -p 9200 -w 2.1d -c 7.5d -r my_backups 
+```
 
 ## Contributing
 1. Fork the repo
