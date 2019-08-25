@@ -10,8 +10,17 @@ A basic Nagios/Icinga plugin to check the status and age of an Elasticsearch sna
 By default all Snapshots are checked for status and age. You can also specify a specific snapshot to check.
 
 ## Installation
-
+### Requirements
+* Python 3.4+
+* Python requests package
+  * pip install requests
+  * RedHat/CentOS
+    * python34-requests.noarch
+      * -or-
+    * python36-requests.noarch
+### Plugin Installation
 * Download check_elasticsearch_snapshot to your PluginContribDir
+* Install Python requests package
 * Add/Import the CheckCommand configuration
 
 ## Usage
