@@ -48,10 +48,14 @@ ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
 
 
 def query(args, qry):
-    req = requests.get('http://{}:{}/{}'.format(args.server, args.port, qry))
+    req = requests.get('http://{}:{}/{}'.format(args.server,
+                                                args.port,
+                                                qry))
     if req.status_code == 200:
         return req.json()
-    print('Failed to query: http://{}:{}/{}'.format(args.server, args.port, qry))
+    print('Failed to query: http://{}:{}/{}'.format(args.server,
+                                                    args.port,
+                                                    qry))
     sys.exit(STATUS_CRITICAL)
 
 
@@ -60,16 +64,19 @@ def check_status(args,
                  newest_snapshot_name,
                  now):
     if now - newest_snapshot_time >= args.critical:
-        print('Most recent snapshot {} in repository {}'
-              ' is older than critical threshold {}'.format(newest_snapshot_name,
-                                                            args.repository,
-                                                            args.critical))
+        print(
+            'Most recent snapshot {} in repository {}'
+            ' is older than critical threshold'
+            ' {}'.format(newest_snapshot_name,
+                         args.repository,
+                         args.critical))
         return STATUS_CRITICAL
     if now - newest_snapshot_time >= args.warning:
         print('Most recent snapshot {} in repository {}'
-              ' is older than warning threshold {}'.format(newest_snapshot_name,
-                                                           args.repository,
-                                                           args.warning))
+              ' is older than warning threshold'
+              ' {}'.format(newest_snapshot_name,
+                           args.repository,
+                           args.warning))
         return STATUS_WARNING
     return STATUS_OK
 
@@ -78,7 +85,9 @@ def check_repository_status(args, repository, now):
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
-    for snapshot in query(args, '_snapshot/{}/_all'.format(repository))['snapshots']:
+    for snapshot in query(
+            args,
+            '_snapshot/{}/_all'.format(repository))['snapshots']:
         if (snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
             newest_snapshot_time = snapshot['end_time_in_millis']
@@ -89,7 +98,10 @@ def check_repository_status(args, repository, now):
                               newest_snapshot_time,
                               newest_snapshot_name,
                               now)
-        return status, newest_snapshot_time, newest_snapshot_name, newest_snapshot_date
+        return (status,
+                newest_snapshot_time,
+                newest_snapshot_name,
+                newest_snapshot_date)
     print('No snapshots found in repository: {}'.format(repository))
     return STATUS_UNKNOWN, None, None, None
 
@@ -109,7 +121,9 @@ def run(args):
         (repo_status,
          repo_newest_snapshot_seconds,
          repo_newest_snapshot_name,
-         repo_newest_snapshot_date) = check_repository_status(args, repository, now)
+         repo_newest_snapshot_date) = check_repository_status(args,
+                                                              repository,
+                                                              now)
         if repo_status > return_status:
             return_status = repo_status
         if 0 < repo_newest_snapshot_seconds < perf_newest_snapshot_seconds:
@@ -155,9 +169,10 @@ def usage():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser('This plugin checks the Elasticsearch snapshots for either all'
-                                     ' or a specific repository. It will test the age'
-                                     ' of any successful snapshot, using the newest in each repository.')
+    parser = argparse.ArgumentParser(
+        'This plugin checks the Elasticsearch snapshots for either all'
+        ' or a specific repository. It will test the age'
+        ' of any successful snapshot, using the newest in each repository.')
     parser.add_argument('-s', '--server', type=str,
                         required=True,
                         dest='server',
