@@ -7,8 +7,8 @@ object CheckCommand "elasticsearch_snapshot" {
 	arguments = {
 		"-s" = "$elasticsearch_snapshot_server$"
 		"-p" = "$elasticsearch_snapshot_port$"
-		"-w" = "$elasticsearch_snapshot_age_warning$"
-		"-c" = "$elasticsearch_snapshot_age_critical$"
+		"-w" = "$elasticsearch_snapshot_warning$"
+		"-c" = "$elasticsearch_snapshot_critical$"
 		"-r" = "$elasticsearch_snapshot_repository$"
 	}
 
