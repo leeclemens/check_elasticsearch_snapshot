@@ -148,27 +148,29 @@ def exit_with_perf_data(newest_repository,
                         perf_newest_seconds,
                         exit_code):
     perf_newest_days = perf_newest_seconds / 1000 / 60 / 60 / 24
-    print(
-        '{} - Most current Repository/Snapshot: {}/{} {}'
-        ' | newest_age={}, newest_age_days={}'.format(
+    output_str = (
+        '{} - Most current Repository/Snapshot: {}/{} {}'.format(
             PREFIXES[exit_code],
             newest_repository,
             newest_snapshot_name,
-            newest_snapshot_date,
+            newest_snapshot_date))
+    if newest_snapshot_name:
+        output_str += ' | newest_age={}, newest_age_days={}'.format(
             perf_newest_seconds,
-            perf_newest_days))
+            perf_newest_days)
+    print(output_str)
     sys.exit(exit_code)
 
 
-def usage():
-    print('Usage: %s -s server -p port -w seconds -c seconds [-r repository]'
-          ' [-t <protocol>]' % sys.argv[0])
-    print('\t-s server      server name')
-    print('\t-p port        port')
-    print('\t-w seconds     warning threshold')
-    print('\t-c seconds     critical threshold')
-    print('\t-r repository  snapshot repository (defaults to _all)')
-    sys.exit(STATUS_UNKNOWN)
+def parse_threshold(threshold):
+    try:
+        raw_seconds = float(threshold.split('d')[0])
+        if threshold.endswith('d'):
+            raw_seconds = raw_seconds * 60 * 60 * 24
+        return raw_seconds
+    except ValueError:
+        print('Invalid warning or critical threshold: {}'.format(threshold))
+        sys.exit(STATUS_CRITICAL)
 
 
 def parse_args():
@@ -184,20 +186,22 @@ def parse_args():
                         required=True,
                         dest='port',
                         help='port')
-    parser.add_argument('-w', '--warning', type=int,
+    parser.add_argument('-w', '--warning', type=str,
                         dest='warning',
                         required=True,
-                        help='warning seconds')
-    parser.add_argument('-c', '--critical', type=int,
+                        help='warning seconds or days (suffixed with d)')
+    parser.add_argument('-c', '--critical', type=str,
                         dest='critical',
                         required=True,
-                        help='critical seconds')
+                        help='critical seconds or days (suffixed with d)')
     parser.add_argument('-r', '--repository', type=str,
                         dest='repository',
                         default=None,
                         required=False,
                         help='repository')
     args = parser.parse_args()
+    args.warning = parse_threshold(str(args.warning))
+    args.critical = parse_threshold(str(args.critical))
     if args.warning > args.critical:
         print('Warning must be less than critical')
         sys.exit(STATUS_CRITICAL)
