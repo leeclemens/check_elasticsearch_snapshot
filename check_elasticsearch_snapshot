@@ -160,6 +160,17 @@ def exit_with_perf_data(newest_repository,
     sys.exit(exit_code)
 
 
+def parse_threshold(threshold):
+    try:
+        raw_seconds = int(threshold.split('d')[0])
+        if threshold.endswith('d'):
+            raw_seconds = raw_seconds * 60 * 60 * 24
+        return raw_seconds
+    except ValueError:
+        print('Invalid warning or critical threshold: {}'.format(threshold))
+        sys.exit(STATUS_CRITICAL)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         'This plugin checks the Elasticsearch snapshots for either all'
@@ -173,20 +184,22 @@ def parse_args():
                         required=True,
                         dest='port',
                         help='port')
-    parser.add_argument('-w', '--warning', type=int,
+    parser.add_argument('-w', '--warning', type=str,
                         dest='warning',
                         required=True,
-                        help='warning seconds')
-    parser.add_argument('-c', '--critical', type=int,
+                        help='warning seconds or days (suffixed with d)')
+    parser.add_argument('-c', '--critical', type=str,
                         dest='critical',
                         required=True,
-                        help='critical seconds')
+                        help='critical seconds or days (suffixed with d)')
     parser.add_argument('-r', '--repository', type=str,
                         dest='repository',
                         default=None,
                         required=False,
                         help='repository')
     args = parser.parse_args()
+    args.warning = parse_threshold(args.warning)
+    args.critical = parse_threshold(args.critical)
     if args.warning > args.critical:
         print('Warning must be less than critical')
         sys.exit(STATUS_CRITICAL)
