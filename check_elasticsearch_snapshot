@@ -67,16 +67,16 @@ def check_status(args,
         print(
             'Most recent snapshot {} in repository {}'
             ' is older than critical threshold'
-            ' {}'.format(newest_snapshot_name,
-                         args.repository,
-                         args.critical))
+            ' {}s'.format(newest_snapshot_name,
+                          args.repository,
+                          args.critical / 1000))
         return STATUS_CRITICAL
     if now - newest_snapshot_time >= args.warning:
         print('Most recent snapshot {} in repository {}'
               ' is older than warning threshold'
-              ' {}'.format(newest_snapshot_name,
-                           args.repository,
-                           args.warning))
+              ' {}s'.format(newest_snapshot_name,
+                            args.repository,
+                            args.warning / 1000))
         return STATUS_WARNING
     return STATUS_OK
 
@@ -111,43 +111,44 @@ def run(args):
     newest_repository = None
     newest_snapshot_name = None
     newest_snapshot_date = None
-    perf_newest_snapshot_seconds = sys.maxsize
+    perf_newest_snapshot_millis = sys.maxsize
     repositories = [args.repository] if args.repository else []
     if not repositories:
         for repository in query(args, '_snapshot/_all'):
             repositories.append(repository)
-    now = time.time()
+    now = time.time() * 1000
     for repository in repositories:
         (repo_status,
-         repo_newest_snapshot_seconds,
+         repo_newest_snapshot_millis,
          repo_newest_snapshot_name,
          repo_newest_snapshot_date) = check_repository_status(args,
                                                               repository,
                                                               now)
         if repo_status > return_status:
             return_status = repo_status
-        if (repo_newest_snapshot_seconds is not None
+        if (repo_newest_snapshot_millis is not None
                 and 0
-                < repo_newest_snapshot_seconds
-                < perf_newest_snapshot_seconds):
+                < repo_newest_snapshot_millis
+                < perf_newest_snapshot_millis):
             newest_repository = repository
-            perf_newest_snapshot_seconds = repo_newest_snapshot_seconds
+            perf_newest_snapshot_millis = repo_newest_snapshot_millis
             newest_snapshot_name = repo_newest_snapshot_name
             newest_snapshot_date = repo_newest_snapshot_date
 
     exit_with_perf_data(newest_repository,
                         newest_snapshot_name,
                         newest_snapshot_date,
-                        (now * 1000) - perf_newest_snapshot_seconds,
+                        now - perf_newest_snapshot_millis,
                         return_status)
 
 
 def exit_with_perf_data(newest_repository,
                         newest_snapshot_name,
                         newest_snapshot_date,
-                        perf_newest_seconds,
+                        perf_newest_millis,
                         exit_code):
-    perf_newest_days = perf_newest_seconds / 1000 / 60 / 60 / 24
+    perf_newest_seconds = perf_newest_millis / 1000
+    perf_newest_days = perf_newest_seconds / 60 / 60 / 24
     output_str = (
         '{} - Most current Repository/Snapshot: {}/{} {}'.format(
             PREFIXES[exit_code],
@@ -155,7 +156,7 @@ def exit_with_perf_data(newest_repository,
             newest_snapshot_name,
             newest_snapshot_date))
     if newest_snapshot_name:
-        output_str += ' | newest_age={}, newest_age_days={}'.format(
+        output_str += ' | newest_age_seconds={},newest_age_days={}'.format(
             perf_newest_seconds,
             perf_newest_days)
     print(output_str)
@@ -164,10 +165,10 @@ def exit_with_perf_data(newest_repository,
 
 def parse_threshold(threshold):
     try:
-        raw_seconds = float(threshold.split('d')[0])
+        raw_millis = float(threshold.split('d')[0])
         if threshold.endswith('d'):
-            raw_seconds = raw_seconds * 60 * 60 * 24
-        return raw_seconds
+            raw_millis = raw_millis * 24 * 60 * 60 * 1000
+        return raw_millis
     except ValueError:
         print('Invalid warning or critical threshold: {}'.format(threshold))
         sys.exit(STATUS_CRITICAL)
