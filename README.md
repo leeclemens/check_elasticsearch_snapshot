@@ -7,7 +7,7 @@ Check Elasticsearch Snapshot
 
 A basic Nagios/Icinga plugin to check the status and age of an Elasticsearch snapshot.
 
-By default all Snapshots are checked for status and age. You can also specify a specific snapshot to check.
+By default all Snapshots are checked for status and age. You can also specify a specific repository to check.
 
 ## Installation
 ### Requirements
