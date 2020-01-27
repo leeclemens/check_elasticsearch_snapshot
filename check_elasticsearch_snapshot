@@ -48,13 +48,18 @@ ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
 
 
 def query(args, qry):
-    req = requests.get('http://{}:{}/{}'.format(args.server,
+    req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
+                                                args.server,
                                                 args.port,
-                                                qry))
+                                                args.subfolder,
+                                                qry),
+                       auth=(args.username, args.password))
     if req.status_code == 200:
         return req.json()
-    print('Failed to query: http://{}:{}/{}'.format(args.server,
+    print('Failed to query: {}://{}:{}/{}{}'.format(args.scheme,
+                                                    args.server,
                                                     args.port,
+                                                    args.subfolder,
                                                     qry))
     sys.exit(STATUS_CRITICAL)
 
@@ -179,6 +184,11 @@ def parse_args():
         'This plugin checks the Elasticsearch snapshots for either all'
         ' or a specific repository. It will test the age'
         ' of any successful snapshot, using the newest in each repository.')
+    parser.add_argument('-m', '--scheme', type=str,
+                        required=False,
+                        dest='scheme',
+                        default='http',
+                        help='scheme (http/https defaults to http)')
     parser.add_argument('-s', '--server', type=str,
                         required=True,
                         dest='server',
@@ -187,6 +197,21 @@ def parse_args():
                         required=True,
                         dest='port',
                         help='port')
+    parser.add_argument('--username', type=str,
+                        required=False,
+                        dest='username',
+                        default=None,
+                        help='username')
+    parser.add_argument('--password', type=str,
+                        required=False,
+                        dest='password',
+                        default=None,
+                        help='password')
+    parser.add_argument('--subfolder', type=str,
+                        required=False,
+                        dest='subfolder',
+                        default='',
+                        help='subfolder')
     parser.add_argument('-w', '--warning', type=str,
                         dest='warning',
                         required=True,
@@ -206,6 +231,8 @@ def parse_args():
     if args.warning > args.critical:
         print('Warning must be less than critical')
         sys.exit(STATUS_CRITICAL)
+    if args.subfolder and not args.subfolder.endswith('/'):
+        args.subfolder += '/'
     return args
 
 

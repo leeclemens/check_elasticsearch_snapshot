@@ -10,6 +10,10 @@ object CheckCommand "elasticsearch_snapshot" {
 		"-w" = "$elasticsearch_snapshot_warning$"
 		"-c" = "$elasticsearch_snapshot_critical$"
 		"-r" = "$elasticsearch_snapshot_repository$"
+		"-m" = "$elasticsearch_snapshot_scheme$"
+		"--username" = "$elasticsearch_snapshot_username$"
+		"--password" = "$elasticsearch_snapshot_password$"
+		"--subfolder" = "$elasticsearch_snapshot_subfolder$"
 	}
 
 	vars.elasticsearch_snapshot_server = "localhost"
