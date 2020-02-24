@@ -215,9 +215,9 @@ def parse_args():
                         default=False,
                         required=False,
                         action='store_true',
-                        help='Treat %s snapshots as %s' %
-                             (ES_SNAPSHOT_STATE_PARTIAL,
-                              ES_SNAPSHOT_STATE_SUCCESS))
+                        help=('Treat %s snapshots as %s'
+                              % (ES_SNAPSHOT_STATE_PARTIAL,
+                                 ES_SNAPSHOT_STATE_SUCCESS)))
     args = parser.parse_args()
     args.warning = parse_threshold(str(args.warning))
     args.critical = parse_threshold(str(args.critical))
