@@ -25,12 +25,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import argparse
 import sys
+import time
 import traceback
 
-import argparse
 import requests
-import time
 
 STATUS_OK = 0
 STATUS_WARNING = 1
@@ -45,6 +45,7 @@ PREFIXES = {
 }
 
 ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
+ES_SNAPSHOT_STATE_PARTIAL = 'PARTIAL'
 
 
 def query(args, qry):
@@ -79,7 +80,8 @@ def check_repository_status(args, repository, now):
     for snapshot in query(
             args,
             '_snapshot/{}/_all'.format(repository))['snapshots']:
-        if (snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
+        if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
+             or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
             newest_snapshot_time = snapshot['end_time_in_millis']
             newest_snapshot_name = snapshot['snapshot']
@@ -208,6 +210,13 @@ def parse_args():
                         default=None,
                         required=False,
                         help='repository')
+    parser.add_argument('--allow-partial',
+                        dest='allow_partial',
+                        default=False,
+                        required=False,
+                        action='store_true',
+                        help='Treat %s snapshots as %s' % (ES_SNAPSHOT_STATE_PARTIAL,
+                                                           ES_SNAPSHOT_STATE_SUCCESS))
     args = parser.parse_args()
     args.warning = parse_threshold(str(args.warning))
     args.critical = parse_threshold(str(args.critical))

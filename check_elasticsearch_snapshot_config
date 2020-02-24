@@ -14,6 +14,7 @@ object CheckCommand "elasticsearch_snapshot" {
 		"--username" = "$elasticsearch_snapshot_username$"
 		"--password" = "$elasticsearch_snapshot_password$"
 		"--subfolder" = "$elasticsearch_snapshot_subfolder$"
+		"--allow-partial" = "$elasticsearch_snapshot_allowpartial$"
 	}
 
 	vars.elasticsearch_snapshot_server = "localhost"
