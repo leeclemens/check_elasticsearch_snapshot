@@ -26,5 +26,5 @@ before_install:
 
 
 script:
-  - pycodestyle --statistics check_elasticsearch_snapshot
+  - pycodestyle --max-line-length=100 --statistics check_elasticsearch_snapshot
   - pylint check_elasticsearch_snapshot
