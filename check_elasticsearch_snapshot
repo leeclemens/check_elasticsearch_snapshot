@@ -216,11 +216,11 @@ def parse_args():
     parser.add_argument('-w', '--warning', type=str,
                         dest='warning',
                         required=True,
-                        help='warning seconds or days (suffixed with d)')
+                        help='warning time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-c', '--critical', type=str,
                         dest='critical',
                         required=True,
-                        help='critical seconds or days (suffixed with d)')
+                        help='critical time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-r', '--repository', type=str,
                         dest='repository',
                         default=None,
