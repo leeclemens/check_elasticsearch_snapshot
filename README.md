@@ -50,8 +50,8 @@ check_elasticsearch_snapshot -s localhost -p 9200 -w 2.1d -c 7.5d -r my_backups
 
 ## Contributing
 1. Fork the repo
-  * Create a new feature branch
-2. Make your edits, commit and push
-3. Create a [Pull Request](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls)
+2. Create a new feature branch
+3. Make your edits, commit and push
+4. Create a [Pull Request](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls) against the develop branch
 
-Or just create an [Issue](https://github.com/leeclemens/check_elasticsearch_snapshot/issues) to report a bug or feature request
+Or create an [Issue](https://github.com/leeclemens/check_elasticsearch_snapshot/issues) to report a bug or feature request
