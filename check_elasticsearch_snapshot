@@ -173,7 +173,8 @@ def parse_threshold(threshold):
             suffix = threshold[-1]
             if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
                 return raw_millis * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
-            print('Unexpected duration in threshold: {}. Complete threshold: {}'.format(suffix, threshold))
+            print('Unexpected duration in threshold: {}.'
+                  ' Complete threshold: {}'.format(suffix, threshold))
             sys.exit(STATUS_CRITICAL)
         except ValueError:
             print('Invalid warning or critical threshold: {}'.format(threshold))
