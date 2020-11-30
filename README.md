@@ -30,9 +30,15 @@ By default all Snapshots are checked for status and age. You can also specify a 
 `[-h] -s SERVER -p PORT -w WARNING -c CRITICAL [-r REPOSITORY]`
 
 ### Thresholds
-* `WARNING 3600` is 1 hour
-* `WARNING 1d` is 1 day
-* `WARNING 1.25d` is 1 day and 6 hours
+The following suffixes can be used; an entirely numeric value is considered as milliseconds.
+* s - seconds
+* m - minutes
+* h - hours
+* d - days
+* w - weeks
+#### Threshold Examples
+* `3h` is 3 hours
+* `1.25d` is 1 day and 6 hours
 
 ### Examples
 ```bash
