@@ -1,7 +1,7 @@
 # check_elasticsearch_snapshot
 
-[![Master Build Status](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot.svg?branch=master)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot)
-[![Develop Build Status](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot.svg?branch=develop)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot)
+[![Master Build Status](https://img.shields.io/travis/leeclemens/check_elasticsearch_snapshot/master?label=master)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Build Status](https://img.shields.io/travis/leeclemens/check_elasticsearch_snapshot/develop?label=develop)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot/branches)
 
 Check Elasticsearch Snapshot
 
