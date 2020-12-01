@@ -47,6 +47,14 @@ PREFIXES = {
 ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
 ES_SNAPSHOT_STATE_PARTIAL = 'PARTIAL'
 
+THRESHOLD_SUFFIX_MULTIPLIERS = {
+    'w': 7 * 24 * 60 * 60 * 1000,
+    'd': 24 * 60 * 60 * 1000,
+    'h': 60 * 60 * 1000,
+    'm': 60 * 1000,
+    's': 1000,
+}
+
 
 def query(args, qry):
     req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
@@ -154,14 +162,23 @@ def exit_with_perf_data(newest_repository,
 
 
 def parse_threshold(threshold):
+    """ Returns milliseconds to use for threshold.
+    Calculates time based on supported suffixes unless value is purely numerical.
+    """
     try:
-        raw_millis = float(threshold.split('d')[0])
-        if threshold.endswith('d'):
-            raw_millis = raw_millis * 24 * 60 * 60 * 1000
-        return raw_millis
+        return float(threshold)
     except ValueError:
-        print('Invalid warning or critical threshold: {}'.format(threshold))
-        sys.exit(STATUS_CRITICAL)
+        try:
+            raw_millis = float(threshold[:-1])
+            suffix = threshold[-1]
+            if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
+                return raw_millis * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
+            print('Unexpected duration in threshold: {}.'
+                  ' Complete threshold: {}'.format(suffix, threshold))
+            sys.exit(STATUS_CRITICAL)
+        except ValueError:
+            print('Invalid warning or critical threshold: {}'.format(threshold))
+            sys.exit(STATUS_CRITICAL)
 
 
 def parse_args():
@@ -200,11 +217,11 @@ def parse_args():
     parser.add_argument('-w', '--warning', type=str,
                         dest='warning',
                         required=True,
-                        help='warning seconds or days (suffixed with d)')
+                        help='warning time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-c', '--critical', type=str,
                         dest='critical',
                         required=True,
-                        help='critical seconds or days (suffixed with d)')
+                        help='critical time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-r', '--repository', type=str,
                         dest='repository',
                         default=None,
