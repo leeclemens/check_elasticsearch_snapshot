@@ -75,6 +75,7 @@ def query(args, qry):
                                         req.status_code))
     except requests.exceptions.ConnectionError as conn_error:
         print('Connection Error: {}'.format(conn_error))
+    # pylint: disable=broad-except
     except Exception as exc:
         print('Unhandled Exception: {}'.format(exc))
     sys.exit(STATUS_CRITICAL)
