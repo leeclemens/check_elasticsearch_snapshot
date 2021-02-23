@@ -57,19 +57,27 @@ THRESHOLD_SUFFIX_MULTIPLIERS = {
 
 
 def query(args, qry):
-    req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
-                                                args.server,
-                                                args.port,
-                                                args.subfolder,
-                                                qry),
-                       auth=(args.username, args.password))
-    if req.status_code == 200:
-        return req.json()
-    print('Failed to query: {}://{}:{}/{}{}'.format(args.scheme,
+    # pylint: disable=broad-except
+    try:
+        req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
                                                     args.server,
                                                     args.port,
                                                     args.subfolder,
-                                                    qry))
+                                                    qry),
+                           auth=(args.username, args.password))
+        if req.status_code == 200:
+            return req.json()
+        print('Failed to query: {}://{}:{}/{}{}.'
+              ' Status Code: {}'.format(args.scheme,
+                                        args.server,
+                                        args.port,
+                                        args.subfolder,
+                                        qry,
+                                        req.status_code))
+    except requests.exceptions.ConnectionError as conn_error:
+        print('Connection Error: {}'.format(conn_error))
+    except Exception as exc:
+        print('Unhandled Exception: {}'.format(exc))
     sys.exit(STATUS_CRITICAL)
 
 
