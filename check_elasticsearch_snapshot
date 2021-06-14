@@ -32,6 +32,9 @@ import traceback
 
 import requests
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 STATUS_OK = 0
 STATUS_WARNING = 1
 STATUS_CRITICAL = 2
@@ -64,7 +67,7 @@ def query(args, qry):
                                                     args.port,
                                                     args.subfolder,
                                                     qry),
-                           auth=(args.username, args.password))
+                       auth=(args.username, args.password), verify =False)
         if req.status_code == 200:
             return req.json()
         print('Failed to query: {}://{}:{}/{}{}.'
