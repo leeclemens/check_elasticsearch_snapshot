@@ -1,13 +1,13 @@
 # check_elasticsearch_snapshot
 
-[![Master Build Status](https://img.shields.io/travis/leeclemens/check_elasticsearch_snapshot/master?label=master)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot/branches)
-[![Develop Build Status](https://img.shields.io/travis/leeclemens/check_elasticsearch_snapshot/develop?label=develop)](https://travis-ci.org/leeclemens/check_elasticsearch_snapshot/branches)
+[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?label=master)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?label=develop)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
 
 Check Elasticsearch Snapshot
 
 A basic Nagios/Icinga plugin to check the status and age of an Elasticsearch snapshot.
 
-By default all Snapshots are checked for status and age. You can also specify a specific repository to check.
+By default, all Snapshots are checked for status and age. You can also specify a specific repository to check.
 
 ## Installation
 ### Requirements
