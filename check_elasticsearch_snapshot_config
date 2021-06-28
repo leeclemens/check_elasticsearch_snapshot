@@ -17,6 +17,9 @@ object CheckCommand "elasticsearch_snapshot" {
 		"--allow-partial" = {
 			set_if = "$elasticsearch_snapshot_allowpartial$"
 		}
+		"--insecure" = {
+			set_if = "$elasticsearch_snapshot_insecure$"
+		}
 	}
 
 	vars.elasticsearch_snapshot_server = "localhost"

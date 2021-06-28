@@ -59,12 +59,23 @@ THRESHOLD_SUFFIX_MULTIPLIERS = {
 def query(args, qry):
     # pylint: disable=broad-except
     try:
+        if args.insecure:
+            try:
+                # noinspection PyPackageRequirements,PyUnresolvedReferences
+                # pylint: disable=import-outside-toplevel
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            except ImportError:
+                # noinspection PyUnusedLocal
+                urllib3 = None
+                print('Failed to import urllib3 or requests.packages.urllib3')
         req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
                                                     args.server,
                                                     args.port,
                                                     args.subfolder,
                                                     qry),
-                           auth=(args.username, args.password))
+                           auth=(args.username, args.password),
+                           verify=not args.insecure)
         if req.status_code == 200:
             return req.json()
         print('Failed to query: {}://{}:{}/{}{}.'
@@ -243,6 +254,12 @@ def parse_args():
                         help=('Treat %s snapshots as %s'
                               % (ES_SNAPSHOT_STATE_PARTIAL,
                                  ES_SNAPSHOT_STATE_SUCCESS)))
+    parser.add_argument('--insecure',
+                        dest='insecure',
+                        default=False,
+                        required=False,
+                        action='store_true',
+                        help='Do not verify SSL certificate and hide warnings')
     args = parser.parse_args()
     args.warning = parse_threshold(str(args.warning))
     args.critical = parse_threshold(str(args.critical))
