@@ -56,7 +56,47 @@ THRESHOLD_SUFFIX_MULTIPLIERS = {
 }
 
 
+def run(args):
+    """Main run function to execute this check
+    """
+    return_status = STATUS_OK
+    newest_repository = None
+    newest_snapshot_name = None
+    newest_snapshot_date = None
+    perf_newest_snapshot_millis = sys.maxsize
+    repositories = [args.repository] if args.repository else []
+    if not repositories:
+        for repository in query(args, '_snapshot/_all'):
+            repositories.append(repository)
+    now = time.time() * 1000
+    for repository in repositories:
+        (repo_status,
+         repo_newest_snapshot_millis,
+         repo_newest_snapshot_name,
+         repo_newest_snapshot_date) = check_repository_status(args,
+                                                              repository,
+                                                              now)
+        if repo_status > return_status:
+            return_status = repo_status
+        if (repo_newest_snapshot_millis is not None
+                and 0
+                < repo_newest_snapshot_millis
+                < perf_newest_snapshot_millis):
+            newest_repository = repository
+            perf_newest_snapshot_millis = repo_newest_snapshot_millis
+            newest_snapshot_name = repo_newest_snapshot_name
+            newest_snapshot_date = repo_newest_snapshot_date
+
+    exit_with_perf_data(newest_repository,
+                        newest_snapshot_name,
+                        newest_snapshot_date,
+                        now - perf_newest_snapshot_millis,
+                        return_status)
+
+
 def query(args, qry):
+    """Query server for snapshots
+    """
     # pylint: disable=broad-except
     try:
         if args.insecure:
@@ -93,6 +133,8 @@ def query(args, qry):
 
 
 def check_status(args, newest_snapshot_time, now):
+    """Evaluate the status of the snapshot time against provided thresholds
+    """
     if now - newest_snapshot_time >= args.critical:
         return STATUS_CRITICAL
     if now - newest_snapshot_time >= args.warning:
@@ -101,6 +143,8 @@ def check_status(args, newest_snapshot_time, now):
 
 
 def check_repository_status(args, repository, now):
+    """Evaluate the status of the snapshots for SUCCESS
+    """
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
@@ -123,47 +167,13 @@ def check_repository_status(args, repository, now):
     return STATUS_UNKNOWN, None, None, None
 
 
-def run(args):
-    return_status = STATUS_OK
-    newest_repository = None
-    newest_snapshot_name = None
-    newest_snapshot_date = None
-    perf_newest_snapshot_millis = sys.maxsize
-    repositories = [args.repository] if args.repository else []
-    if not repositories:
-        for repository in query(args, '_snapshot/_all'):
-            repositories.append(repository)
-    now = time.time() * 1000
-    for repository in repositories:
-        (repo_status,
-         repo_newest_snapshot_millis,
-         repo_newest_snapshot_name,
-         repo_newest_snapshot_date) = check_repository_status(args,
-                                                              repository,
-                                                              now)
-        if repo_status > return_status:
-            return_status = repo_status
-        if (repo_newest_snapshot_millis is not None
-                and 0
-                < repo_newest_snapshot_millis
-                < perf_newest_snapshot_millis):
-            newest_repository = repository
-            perf_newest_snapshot_millis = repo_newest_snapshot_millis
-            newest_snapshot_name = repo_newest_snapshot_name
-            newest_snapshot_date = repo_newest_snapshot_date
-
-    exit_with_perf_data(newest_repository,
-                        newest_snapshot_name,
-                        newest_snapshot_date,
-                        now - perf_newest_snapshot_millis,
-                        return_status)
-
-
 def exit_with_perf_data(newest_repository,
                         newest_snapshot_name,
                         newest_snapshot_date,
                         perf_newest_millis,
                         exit_code):
+    """Print result with perf data and exit
+    """
     perf_newest_seconds = perf_newest_millis / 1000
     perf_newest_days = perf_newest_seconds / 60 / 60 / 24
     output_str = (
@@ -201,6 +211,8 @@ def parse_threshold(threshold):
 
 
 def parse_args():
+    """Parse command line arguments
+    """
     parser = argparse.ArgumentParser(
         'This plugin checks the Elasticsearch snapshots for either all'
         ' or a specific repository. It will test the age'
