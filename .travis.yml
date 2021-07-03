@@ -2,11 +2,10 @@ dist: xenial
 sudo: false
 
 matrix:
-    fast_finish: true
+  fast_finish: true
 
 language: python
 python:
-  - "3.4"
   - "3.5"
   - "3.6"
   - "3.7"
