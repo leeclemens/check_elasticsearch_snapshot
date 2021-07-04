@@ -4,4 +4,5 @@ Feel free to add your name as part of a PR.
 - giudig
 - kumy
 - leeclemens
+- speech77
 - tatref
