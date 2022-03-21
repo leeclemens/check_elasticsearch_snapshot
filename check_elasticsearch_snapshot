@@ -171,7 +171,8 @@ def exit_with_perf_data(newest_repository,
                   f' - Most current Repository/Snapshot:'
                   f' {newest_repository}/{newest_snapshot_name} {newest_snapshot_date}')
     if newest_snapshot_name:
-        output_str += f' | newest_age_seconds={perf_newest_seconds} newest_age_days={perf_newest_days}'
+        output_str += (f' | newest_age_seconds={perf_newest_seconds}'
+                       f' newest_age_days={perf_newest_days}')
     print(output_str)
     sys.exit(exit_code)
 
@@ -249,7 +250,8 @@ def parse_args():
                         default=False,
                         required=False,
                         action='store_true',
-                        help=f'Treat {ES_SNAPSHOT_STATE_PARTIAL} snapshots as {ES_SNAPSHOT_STATE_SUCCESS}')
+                        help=f'Treat {ES_SNAPSHOT_STATE_PARTIAL}'
+                             f' snapshots as {ES_SNAPSHOT_STATE_SUCCESS}')
     parser.add_argument('--insecure',
                         dest='insecure',
                         default=False,
