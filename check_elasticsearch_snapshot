@@ -141,7 +141,7 @@ def check_repository_status(args, repository, now):
     newest_snapshot_date = None
     for snapshot in query(
             args,
-            f'_snapshot/{repository}/_all')['snapshots']:
+            f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
         if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
              or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
@@ -245,6 +245,11 @@ def parse_args():
                         default=None,
                         required=False,
                         help='repository')
+    parser.add_argument('-n', '--snapname', type=str,
+                        dest='snap_name',
+                        default='_all',
+                        required=False,
+                        help='snapshot name (with wildcard)')
     parser.add_argument('--allow-partial',
                         dest='allow_partial',
                         default=False,
