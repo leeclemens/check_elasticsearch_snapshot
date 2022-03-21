@@ -13,7 +13,7 @@ By default, all Snapshots are checked for status and age. You can also specify a
 
 ### Requirements
 
-* Python 3.5+
+* Python 3.6+
 * Python requests package
     * pip install requests
     * RedHat/CentOS
