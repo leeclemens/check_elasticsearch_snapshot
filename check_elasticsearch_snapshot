@@ -56,74 +56,9 @@ THRESHOLD_SUFFIX_MULTIPLIERS = {
 }
 
 
-def query(args, qry):
-    # pylint: disable=broad-except
-    try:
-        if args.insecure:
-            try:
-                # noinspection PyPackageRequirements,PyUnresolvedReferences
-                # pylint: disable=import-outside-toplevel
-                import urllib3
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            except ImportError:
-                # noinspection PyUnusedLocal
-                urllib3 = None
-                print('Failed to import urllib3 or requests.packages.urllib3')
-        req = requests.get('{}://{}:{}/{}{}'.format(args.scheme,
-                                                    args.server,
-                                                    args.port,
-                                                    args.subfolder,
-                                                    qry),
-                           auth=(args.username, args.password),
-                           verify=not args.insecure)
-        if req.status_code == 200:
-            return req.json()
-        print('Failed to query: {}://{}:{}/{}{}.'
-              ' Status Code: {}'.format(args.scheme,
-                                        args.server,
-                                        args.port,
-                                        args.subfolder,
-                                        qry,
-                                        req.status_code))
-    except requests.exceptions.ConnectionError as conn_error:
-        print('Connection Error: {}'.format(conn_error))
-    except Exception as exc:
-        print('Unhandled Exception: {}'.format(exc))
-    sys.exit(STATUS_CRITICAL)
-
-
-def check_status(args, newest_snapshot_time, now):
-    if now - newest_snapshot_time >= args.critical:
-        return STATUS_CRITICAL
-    if now - newest_snapshot_time >= args.warning:
-        return STATUS_WARNING
-    return STATUS_OK
-
-
-def check_repository_status(args, repository, now):
-    newest_snapshot_time = 0
-    newest_snapshot_name = None
-    newest_snapshot_date = None
-    for snapshot in query(
-            args,
-            '_snapshot/{}/_all'.format(repository))['snapshots']:
-        if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
-             or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
-                and snapshot['end_time_in_millis'] > newest_snapshot_time):
-            newest_snapshot_time = snapshot['end_time_in_millis']
-            newest_snapshot_name = snapshot['snapshot']
-            newest_snapshot_date = snapshot['end_time']
-    if newest_snapshot_name:
-        status = check_status(args, newest_snapshot_time, now)
-        return (status,
-                newest_snapshot_time,
-                newest_snapshot_name,
-                newest_snapshot_date)
-    print('No snapshots found in repository: {}'.format(repository))
-    return STATUS_UNKNOWN, None, None, None
-
-
 def run(args):
+    """Main run function to execute this check
+    """
     return_status = STATUS_OK
     newest_repository = None
     newest_snapshot_name = None
@@ -159,23 +94,85 @@ def run(args):
                         return_status)
 
 
+def query(args, qry):
+    """Query server for snapshots
+    """
+    # pylint: disable=broad-except
+    try:
+        if args.insecure:
+            try:
+                # noinspection PyPackageRequirements,PyUnresolvedReferences
+                # pylint: disable=import-outside-toplevel
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            except ImportError:
+                # noinspection PyUnusedLocal
+                urllib3 = None
+                print('Failed to import urllib3 or requests.packages.urllib3')
+        req = requests.get(f'{args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}',
+                           auth=(args.username, args.password),
+                           verify=not args.insecure)
+        if req.status_code == 200:
+            return req.json()
+        print(f'Failed to query: {args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}.'
+              f' Status Code: {req.status_code}')
+    except requests.exceptions.ConnectionError as conn_error:
+        print(f'Connection Error: {conn_error}')
+    except Exception as exc:
+        print(f'Unhandled Exception: {exc}')
+    sys.exit(STATUS_CRITICAL)
+
+
+def check_status(args, newest_snapshot_time, now):
+    """Evaluate the status of the snapshot time against provided thresholds
+    """
+    if now - newest_snapshot_time >= args.critical:
+        return STATUS_CRITICAL
+    if now - newest_snapshot_time >= args.warning:
+        return STATUS_WARNING
+    return STATUS_OK
+
+
+def check_repository_status(args, repository, now):
+    """Evaluate the status of the snapshots for SUCCESS
+    """
+    newest_snapshot_time = 0
+    newest_snapshot_name = None
+    newest_snapshot_date = None
+    for snapshot in query(
+            args,
+            f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
+        if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
+             or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
+                and snapshot['end_time_in_millis'] > newest_snapshot_time):
+            newest_snapshot_time = snapshot['end_time_in_millis']
+            newest_snapshot_name = snapshot['snapshot']
+            newest_snapshot_date = snapshot['end_time']
+    if newest_snapshot_name:
+        status = check_status(args, newest_snapshot_time, now)
+        return (status,
+                newest_snapshot_time,
+                newest_snapshot_name,
+                newest_snapshot_date)
+    print(f'No snapshots found in repository: {repository}')
+    return STATUS_UNKNOWN, None, None, None
+
+
 def exit_with_perf_data(newest_repository,
                         newest_snapshot_name,
                         newest_snapshot_date,
                         perf_newest_millis,
                         exit_code):
+    """Print result with perf data and exit
+    """
     perf_newest_seconds = perf_newest_millis / 1000
     perf_newest_days = perf_newest_seconds / 60 / 60 / 24
-    output_str = (
-        '{} - Most current Repository/Snapshot: {}/{} {}'.format(
-            PREFIXES[exit_code],
-            newest_repository,
-            newest_snapshot_name,
-            newest_snapshot_date))
+    output_str = (f'{PREFIXES[exit_code]}'
+                  f' - Most current Repository/Snapshot:'
+                  f' {newest_repository}/{newest_snapshot_name} {newest_snapshot_date}')
     if newest_snapshot_name:
-        output_str += ' | newest_age_seconds={} newest_age_days={}'.format(
-            perf_newest_seconds,
-            perf_newest_days)
+        output_str += (f' | newest_age_seconds={perf_newest_seconds}'
+                       f' newest_age_days={perf_newest_days}')
     print(output_str)
     sys.exit(exit_code)
 
@@ -192,15 +189,17 @@ def parse_threshold(threshold):
             suffix = threshold[-1]
             if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
                 return raw_millis * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
-            print('Unexpected duration in threshold: {}.'
-                  ' Complete threshold: {}'.format(suffix, threshold))
+            print(f'Unexpected duration in threshold: {suffix}.'
+                  f' Complete threshold: {threshold}')
             sys.exit(STATUS_CRITICAL)
         except ValueError:
-            print('Invalid warning or critical threshold: {}'.format(threshold))
+            print(f'Invalid warning or critical threshold: {threshold}')
             sys.exit(STATUS_CRITICAL)
 
 
 def parse_args():
+    """Parse command line arguments
+    """
     parser = argparse.ArgumentParser(
         'This plugin checks the Elasticsearch snapshots for either all'
         ' or a specific repository. It will test the age'
@@ -246,14 +245,18 @@ def parse_args():
                         default=None,
                         required=False,
                         help='repository')
+    parser.add_argument('-n', '--snapname', type=str,
+                        dest='snap_name',
+                        default='_all',
+                        required=False,
+                        help='snapshot name (with wildcard)')
     parser.add_argument('--allow-partial',
                         dest='allow_partial',
                         default=False,
                         required=False,
                         action='store_true',
-                        help=('Treat %s snapshots as %s'
-                              % (ES_SNAPSHOT_STATE_PARTIAL,
-                                 ES_SNAPSHOT_STATE_SUCCESS)))
+                        help=f'Treat {ES_SNAPSHOT_STATE_PARTIAL}'
+                             f' snapshots as {ES_SNAPSHOT_STATE_SUCCESS}')
     parser.add_argument('--insecure',
                         dest='insecure',
                         default=False,
@@ -276,7 +279,7 @@ if __name__ == '__main__':
         run(parse_args())
     # pylint: disable=broad-except
     except Exception as ex:
-        print('%s: Unhandled exception %s' % (sys.argv[0], type(ex)))
+        print(f'{sys.argv[0]}: Unhandled exception {type(ex)}')
         print(ex)
         traceback.print_exc()
         sys.exit(STATUS_CRITICAL)

@@ -1,7 +1,7 @@
 # check_elasticsearch_snapshot
 
-[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?label=master)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
-[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?label=develop)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
 
 Check Elasticsearch Snapshot
 
@@ -13,7 +13,7 @@ By default, all Snapshots are checked for status and age. You can also specify a
 
 ### Requirements
 
-* Python 3.5+
+* Python 3.6+
 * Python requests package
     * pip install requests
     * RedHat/CentOS
