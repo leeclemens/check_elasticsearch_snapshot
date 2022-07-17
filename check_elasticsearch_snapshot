@@ -74,7 +74,8 @@ THRESHOLD_SUFFIX_LABEL = {
     THRESHOLD_SUFFIX_MILLIS: 'millis',
 }
 
-DEFAULT_PERF_THRESHOLD_SUFFIXES = [THRESHOLD_SUFFIX_SECONDS, THRESHOLD_SUFFIX_DAYS]
+DEFAULT_PERF_THRESHOLD_SUFFIXES = [THRESHOLD_SUFFIX_SECONDS,
+                                   THRESHOLD_SUFFIX_DAYS]
 
 
 class SnapshotInfo:
@@ -118,7 +119,8 @@ class SnapshotQueryInfo:
     """Information for querying snapshot info via ES API
     """
 
-    def __init__(self, scheme, server, port, subfolder, username, password, insecure):
+    def __init__(self, scheme, server, port, subfolder,
+                 username, password, insecure):
         """Snapshot Query Information used for querying snapshot data
         """
         self.__scheme = scheme
@@ -176,7 +178,8 @@ def run(args):
     """Main run function to execute this check
     """
     return_status = STATUS_OK
-    query_info = SnapshotQueryInfo(args.scheme, args.server, args.port, args.subfolder,
+    query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
+                                   args.subfolder,
                                    args.username, args.password,
                                    args.insecure)
     newest_snapshot_info = SnapshotInfo(None, None, None, sys.maxsize)
@@ -199,7 +202,9 @@ def run(args):
         if repo_status > return_status:
             return_status = repo_status
         if (repo_newest_snapshot_millis is not None
-                and 0 < repo_newest_snapshot_millis < newest_snapshot_info.snap_ms):
+                and (0
+                     < repo_newest_snapshot_millis
+                     < newest_snapshot_info.snap_ms)):
             newest_snapshot_info.repository = repository
             newest_snapshot_info.snap_name = repo_newest_snapshot_name
             newest_snapshot_info.snap_date = repo_newest_snapshot_date
@@ -236,15 +241,18 @@ def check_repository_status(query_info,
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
-    for snapshot in query(query_info, f'_snapshot/{repository}/{snap_name}')['snapshots']:
+    for snapshot in query(query_info,
+                          f'_snapshot/{repository}/{snap_name}')['snapshots']:
         if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
-             or (allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
+             or (allow_partial
+                 and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
             newest_snapshot_time = snapshot['end_time_in_millis']
             newest_snapshot_name = snapshot['snapshot']
             newest_snapshot_date = snapshot['end_time']
     if newest_snapshot_name:
-        status = check_status(warning_ms, critical_ms, newest_snapshot_time, now_ms)
+        status = check_status(warning_ms, critical_ms,
+                              newest_snapshot_time, now_ms)
         return (status,
                 newest_snapshot_time,
                 newest_snapshot_name,
@@ -258,13 +266,15 @@ def query(query_info, qry):
     """
     # pylint: disable=broad-except
     try:
-        req = requests.get(f'{query_info.scheme}://{query_info.server}:{query_info.port}'
-                           f'/{query_info.subfolder}{qry}',
-                           auth=(query_info.username, query_info.password),
-                           verify=not query_info.insecure)
+        req = requests.get(
+            f'{query_info.scheme}://{query_info.server}:{query_info.port}'
+            f'/{query_info.subfolder}{qry}',
+            auth=(query_info.username, query_info.password),
+            verify=not query_info.insecure)
         if req.status_code == 200:
             return req.json()
-        print(f'Failed to query: {query_info.scheme}://{query_info.server}:{query_info.port}'
+        print(f'Failed to query:'
+              f' {query_info.scheme}://{query_info.server}:{query_info.port}'
               f'/{query_info.subfolder}{qry}.'
               f' Status Code: {req.status_code}')
     except requests.exceptions.ConnectionError as conn_error:
@@ -303,7 +313,8 @@ def exit_with_perf_data(threshold_suffix,
             perf_units.append(threshold_suffix)
         for suffix in threshold_suffix:
             converted_time = convert_from_millis(perf_newest_age_ms, suffix)
-            output_str += f' newest_age_{THRESHOLD_SUFFIX_LABEL[suffix]}={converted_time}'
+            output_str += (f' newest_age_{THRESHOLD_SUFFIX_LABEL[suffix]}'
+                           f'={converted_time}')
     print(output_str)
     sys.exit(exit_code)
 
@@ -381,7 +392,8 @@ def parse_args():
     crit_ms, crit_threshold = get_threshold(args.critical_threshold_arg)
     if warn_threshold != crit_threshold:
         # This is not entirely necessary, but simplifies.
-        #   If there is a use-case for having these be different units, please open an Issue
+        #   If there is a use-case for having these be different units,
+        #     please open an Issue
         print('Warning and critical threshold suffixes must be the same')
         sys.exit(STATUS_UNKNOWN)
     if warn_ms > crit_ms:
@@ -400,14 +412,17 @@ def get_threshold(arg_value):
     """
     try:
         # the default is ms, attempt to convert the value
-        return convert_to_millis(int(arg_value), THRESHOLD_SUFFIX_MILLIS), THRESHOLD_SUFFIX_MILLIS
+        return (convert_to_millis(int(arg_value), THRESHOLD_SUFFIX_MILLIS),
+                THRESHOLD_SUFFIX_MILLIS)
     except ValueError:
         try:
             raw_time = float(arg_value[:-1])
             suffix = arg_value[-1]
-            return convert_to_millis(raw_time, suffix, arg_value=arg_value), suffix
+            return (convert_to_millis(raw_time, suffix, arg_value=arg_value),
+                    suffix)
         except ValueError:
-            print(f'Threshold is not numeric or uses an invalid suffix: {arg_value}')
+            print(f'Threshold is not numeric or uses an invalid suffix:'
+                  f' {arg_value}')
             sys.exit(STATUS_UNKNOWN)
 
 
