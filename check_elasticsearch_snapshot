@@ -114,22 +114,88 @@ class SnapshotInfo:
         self.__snap_name = value
 
 
+class SnapshotQueryInfo:
+    """Information for querying snapshot info via ES API
+    """
+
+    def __init__(self, scheme, server, port, subfolder, username, password, insecure):
+        """Snapshot Query Information used for querying snapshot data
+        """
+        self.__scheme = scheme
+        self.__server = server
+        self.__port = port
+        self.__subfolder = subfolder
+        self.__username = username
+        self.__password = password
+        self.__insecure = insecure
+
+    @property
+    def scheme(self):
+        """The scheme
+        """
+        return self.__scheme
+
+    @property
+    def server(self):
+        """The server
+        """
+        return self.__server
+
+    @property
+    def port(self):
+        """The port
+        """
+        return self.__port
+
+    @property
+    def subfolder(self):
+        """The subfolder
+        """
+        return self.__subfolder
+
+    @property
+    def username(self):
+        """The username
+        """
+        return self.__username
+
+    @property
+    def password(self):
+        """The password
+        """
+        return self.__password
+
+    @property
+    def insecure(self):
+        """Require https
+        """
+        return self.__insecure
+
+
 def run(args):
     """Main run function to execute this check
     """
     return_status = STATUS_OK
+    query_info = SnapshotQueryInfo(args.scheme, args.server, args.port, args.subfolder,
+                                   args.username, args.password,
+                                   args.insecure)
     newest_snapshot_info = SnapshotInfo(None, None, None, sys.maxsize)
     repositories = [args.repository] if args.repository else []
     disable_urllib3_warnings(args.insecure)
     if not repositories:
-        for repository in query(args, '_snapshot/_all'):
+        for repository in query(query_info, '_snapshot/_all'):
             repositories.append(repository)
-    now = time.time() * 1000
+    now_ms = time.time() * 1000
+
     for repository in repositories:
         (repo_status,
          repo_newest_snapshot_millis,
          repo_newest_snapshot_name,
-         repo_newest_snapshot_date) = check_repository_status(args, repository, now)
+         repo_newest_snapshot_date) = check_repository_status(
+            query_info,
+            args.snap_name, args.allow_partial,
+            args.warning_ms, args.critical_ms,
+            repository, now_ms)
         if repo_status > return_status:
             return_status = repo_status
         if (repo_newest_snapshot_millis is not None
@@ -139,7 +205,7 @@ def run(args):
             newest_snapshot_info.snap_date = repo_newest_snapshot_date
             newest_snapshot_info.snap_ms = repo_newest_snapshot_millis
 
-    perf_newest_age_ms = now - newest_snapshot_info.snap_ms
+    perf_newest_age_ms = now_ms - newest_snapshot_info.snap_ms
     exit_with_perf_data(args.threshold_suffix,
                         newest_snapshot_info,
                         perf_newest_age_ms,
@@ -161,40 +227,24 @@ def disable_urllib3_warnings(insecure):
             print('Failed to import urllib3 or requests.packages.urllib3')
 
 
-def query(args, qry):
-    """Query server for snapshots
-    """
-    # pylint: disable=broad-except
-    try:
-        req = requests.get(f'{args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}',
-                           auth=(args.username, args.password),
-                           verify=not args.insecure)
-        if req.status_code == 200:
-            return req.json()
-        print(f'Failed to query: {args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}.'
-              f' Status Code: {req.status_code}')
-    except requests.exceptions.ConnectionError as conn_error:
-        print(f'Connection Error: {conn_error}')
-    except Exception as exc:
-        print(f'Unhandled Exception: {exc}')
-    sys.exit(STATUS_CRITICAL)
-
-
-def check_repository_status(args, repository, now):
+def check_repository_status(query_info,
+                            snap_name, allow_partial,
+                            warning_ms, critical_ms,
+                            repository, now_ms):
     """Evaluate the status of the snapshots for SUCCESS
     """
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
-    for snapshot in query(args, f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
+    for snapshot in query(query_info, f'_snapshot/{repository}/{snap_name}')['snapshots']:
         if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
-             or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
+             or (allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
             newest_snapshot_time = snapshot['end_time_in_millis']
             newest_snapshot_name = snapshot['snapshot']
             newest_snapshot_date = snapshot['end_time']
     if newest_snapshot_name:
-        status = check_status(args, newest_snapshot_time, now)
+        status = check_status(warning_ms, critical_ms, newest_snapshot_time, now_ms)
         return (status,
                 newest_snapshot_time,
                 newest_snapshot_name,
@@ -203,12 +253,33 @@ def check_repository_status(args, repository, now):
     return STATUS_UNKNOWN, None, None, None
 
 
-def check_status(args, newest_snapshot_ms, now_ms):
+def query(query_info, qry):
+    """Query server for snapshots
+    """
+    # pylint: disable=broad-except
+    try:
+        req = requests.get(f'{query_info.scheme}://{query_info.server}:{query_info.port}'
+                           f'/{query_info.subfolder}{qry}',
+                           auth=(query_info.username, query_info.password),
+                           verify=not query_info.insecure)
+        if req.status_code == 200:
+            return req.json()
+        print(f'Failed to query: {query_info.scheme}://{query_info.server}:{query_info.port}'
+              f'/{query_info.subfolder}{qry}.'
+              f' Status Code: {req.status_code}')
+    except requests.exceptions.ConnectionError as conn_error:
+        print(f'Connection Error: {conn_error}')
+    except Exception as exc:
+        print(f'Unhandled Exception: {exc}')
+    sys.exit(STATUS_CRITICAL)
+
+
+def check_status(warning_ms, critical_ms, newest_snapshot_ms, now_ms):
     """Evaluate the status of the snapshot time against provided thresholds
     """
-    if now_ms - newest_snapshot_ms >= args.critical_ms:
+    if now_ms - newest_snapshot_ms >= critical_ms:
         return STATUS_CRITICAL
-    if now_ms - newest_snapshot_ms >= args.warning_ms:
+    if now_ms - newest_snapshot_ms >= warning_ms:
         return STATUS_WARNING
     return STATUS_OK
 
