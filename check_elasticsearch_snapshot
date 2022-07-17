@@ -100,11 +100,11 @@ def query(args, qry):
     # pylint: disable=broad-except
     try:
         if args.insecure:
+            # pylint: disable=import-outside-toplevel
+            import urllib3
+            from urllib3.exceptions import InsecureRequestWarning
             try:
-                # noinspection PyPackageRequirements,PyUnresolvedReferences
-                # pylint: disable=import-outside-toplevel
-                import urllib3
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                urllib3.disable_warnings(InsecureRequestWarning)
             except ImportError:
                 # noinspection PyUnusedLocal
                 urllib3 = None
