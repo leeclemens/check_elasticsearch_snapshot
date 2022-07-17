@@ -1,10 +1,15 @@
 # Check Elasticsearch Snapshot
 
-[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=build:master)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
-[![Master Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/master?style=for-the-badge&label=code%20quality:master)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=master)
+[![License](https://img.shields.io/github/license/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
+[![Current Version](https://img.shields.io/github/v/tag/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
+[![Issues](https://img.shields.io/github/issues-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/issues?q=is%3Aopen+is%3Aissue)
+[![Pull Requests](https://img.shields.io/github/issues-pr-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls?q=is%3Aopen+is%3Apr)
 
-[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=build:develop)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
-[![Develop Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/develop?style=for-the-badge&label=code%20quality:develop)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=develop)
+[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Master Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/master?style=for-the-badge&label=master:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=master)
+
+[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/develop?style=for-the-badge&label=develop:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=develop)
 
 ## Description
 
