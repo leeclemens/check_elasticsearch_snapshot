@@ -119,6 +119,8 @@ class SnapshotQueryInfo:
     """
 
     def __init__(self, scheme, server, port, subfolder, username, password, insecure):
+        """Snapshot Query Information used for querying snapshot data
+        """
         self.__scheme = scheme
         self.__server = server
         self.__port = port
