@@ -1,8 +1,13 @@
-Special thanks to all contributors - code, ideas, bug reports alike (alphabetical).
-Feel free to add your name as part of a PR.
+# Thanks to all contributors
 
-- giudig
-- kumy
-- leeclemens
-- speech77
-- tatref
+## File to track all contributors
+
+* code, ideas, bug reports alike (alphabetical)
+
+### Please add your name as part of a PR
+
+* giudig
+* kumy
+* leeclemens
+* speech77
+* tatref
