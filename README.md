@@ -25,8 +25,8 @@ You can also specify a specific repository to check.
 * Python 3.6+
 * Python requests package
   * pip install requests
-    * RedHat/CentOS
-      * python36-requests.noarch
+  * RedHat/CentOS
+    * python36-requests.noarch
 
 ### Plugin Installation
 
