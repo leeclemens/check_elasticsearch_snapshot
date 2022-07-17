@@ -47,23 +47,78 @@ PREFIXES = {
 ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
 ES_SNAPSHOT_STATE_PARTIAL = 'PARTIAL'
 
+# Only used internally and as the default, but never as an argument
+THRESHOLD_SUFFIX_MILLIS = 'ms'
+# These are supported from the argument (one character)
+THRESHOLD_SUFFIX_SECONDS = 's'
+THRESHOLD_SUFFIX_MINUTES = 'm'
+THRESHOLD_SUFFIX_HOURS = 'h'
+THRESHOLD_SUFFIX_DAYS = 'd'
+THRESHOLD_SUFFIX_WEEKS = 'w'
+
 THRESHOLD_SUFFIX_MULTIPLIERS = {
-    'w': 7 * 24 * 60 * 60 * 1000,
-    'd': 24 * 60 * 60 * 1000,
-    'h': 60 * 60 * 1000,
-    'm': 60 * 1000,
-    's': 1000,
+    THRESHOLD_SUFFIX_WEEKS: 7 * 24 * 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_DAYS: 24 * 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_HOURS: 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_MINUTES: 60 * 1000,
+    THRESHOLD_SUFFIX_SECONDS: 1000,
+    THRESHOLD_SUFFIX_MILLIS: 1,
 }
+
+THRESHOLD_SUFFIX_LABEL = {
+    THRESHOLD_SUFFIX_WEEKS: 'weeks',
+    THRESHOLD_SUFFIX_DAYS: 'days',
+    THRESHOLD_SUFFIX_HOURS: 'hours',
+    THRESHOLD_SUFFIX_MINUTES: 'minutes',
+    THRESHOLD_SUFFIX_SECONDS: 'seconds',
+    THRESHOLD_SUFFIX_MILLIS: 'millis',
+}
+
+DEFAULT_PERF_THRESHOLD_SUFFIXES = [THRESHOLD_SUFFIX_SECONDS, THRESHOLD_SUFFIX_DAYS]
+
+
+class SnapshotInfo:
+    """Class to retain information about the latest snapshot
+    """
+
+    def __init__(self, repository, snap_name, snap_date, snap_ms):
+        """Initialize default snapshot information
+        """
+        self.__repository = repository
+        self.__snap_name = snap_name
+        self.snap_date = snap_date
+        self.snap_ms = snap_ms
+
+    @property
+    def repository(self):
+        """The repository which stores the snapshot
+        """
+        return self.__repository
+
+    @repository.setter
+    def repository(self, value):
+        """Set the repository storing the snapshot
+        """
+        self.__repository = value
+
+    @property
+    def snap_name(self):
+        """Get the snapshot name
+        """
+        return self.__snap_name
+
+    @snap_name.setter
+    def snap_name(self, value):
+        """Set the snapshot name
+        """
+        self.__snap_name = value
 
 
 def run(args):
     """Main run function to execute this check
     """
     return_status = STATUS_OK
-    newest_repository = None
-    newest_snapshot_name = None
-    newest_snapshot_date = None
-    perf_newest_snapshot_millis = sys.maxsize
+    newest_snapshot_info = SnapshotInfo(None, None, None, sys.maxsize)
     repositories = [args.repository] if args.repository else []
     disable_urllib3_warnings(args.insecure)
     if not repositories:
@@ -74,24 +129,20 @@ def run(args):
         (repo_status,
          repo_newest_snapshot_millis,
          repo_newest_snapshot_name,
-         repo_newest_snapshot_date) = check_repository_status(args,
-                                                              repository,
-                                                              now)
+         repo_newest_snapshot_date) = check_repository_status(args, repository, now)
         if repo_status > return_status:
             return_status = repo_status
         if (repo_newest_snapshot_millis is not None
-                and 0
-                < repo_newest_snapshot_millis
-                < perf_newest_snapshot_millis):
-            newest_repository = repository
-            perf_newest_snapshot_millis = repo_newest_snapshot_millis
-            newest_snapshot_name = repo_newest_snapshot_name
-            newest_snapshot_date = repo_newest_snapshot_date
+                and 0 < repo_newest_snapshot_millis < newest_snapshot_info.snap_ms):
+            newest_snapshot_info.repository = repository
+            newest_snapshot_info.snap_name = repo_newest_snapshot_name
+            newest_snapshot_info.snap_date = repo_newest_snapshot_date
+            newest_snapshot_info.snap_ms = repo_newest_snapshot_millis
 
-    exit_with_perf_data(newest_repository,
-                        newest_snapshot_name,
-                        newest_snapshot_date,
-                        now - perf_newest_snapshot_millis,
+    perf_newest_age_ms = now - newest_snapshot_info.snap_ms
+    exit_with_perf_data(args.threshold_suffix,
+                        newest_snapshot_info,
+                        perf_newest_age_ms,
                         return_status)
 
 
@@ -129,25 +180,13 @@ def query(args, qry):
     sys.exit(STATUS_CRITICAL)
 
 
-def check_status(args, newest_snapshot_time, now):
-    """Evaluate the status of the snapshot time against provided thresholds
-    """
-    if now - newest_snapshot_time >= args.critical:
-        return STATUS_CRITICAL
-    if now - newest_snapshot_time >= args.warning:
-        return STATUS_WARNING
-    return STATUS_OK
-
-
 def check_repository_status(args, repository, now):
     """Evaluate the status of the snapshots for SUCCESS
     """
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
-    for snapshot in query(
-            args,
-            f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
+    for snapshot in query(args, f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
         if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
              or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
@@ -164,43 +203,38 @@ def check_repository_status(args, repository, now):
     return STATUS_UNKNOWN, None, None, None
 
 
-def exit_with_perf_data(newest_repository,
-                        newest_snapshot_name,
-                        newest_snapshot_date,
-                        perf_newest_millis,
+def check_status(args, newest_snapshot_ms, now_ms):
+    """Evaluate the status of the snapshot time against provided thresholds
+    """
+    if now_ms - newest_snapshot_ms >= args.critical_ms:
+        return STATUS_CRITICAL
+    if now_ms - newest_snapshot_ms >= args.warning_ms:
+        return STATUS_WARNING
+    return STATUS_OK
+
+
+def exit_with_perf_data(threshold_suffix,
+                        newest_snapshot_info,
+                        perf_newest_age_ms,
                         exit_code):
     """Print result with perf data and exit
     """
-    perf_newest_seconds = perf_newest_millis / 1000
-    perf_newest_days = perf_newest_seconds / 60 / 60 / 24
     output_str = (f'{PREFIXES[exit_code]}'
                   f' - Most current Repository/Snapshot:'
-                  f' {newest_repository}/{newest_snapshot_name} {newest_snapshot_date}')
-    if newest_snapshot_name:
-        output_str += (f' | newest_age_seconds={perf_newest_seconds}'
-                       f' newest_age_days={perf_newest_days}')
+                  f' {newest_snapshot_info.repository}'
+                  f'/{newest_snapshot_info.snap_name}'
+                  f' {newest_snapshot_info.snap_date}')
+    if newest_snapshot_info.snap_name:
+        output_str += ' |'
+        perf_units = DEFAULT_PERF_THRESHOLD_SUFFIXES
+        # Only add new threshold suffix if it's not one of the defaults
+        if threshold_suffix not in perf_units:
+            perf_units.append(threshold_suffix)
+        for suffix in threshold_suffix:
+            converted_time = convert_from_millis(perf_newest_age_ms, suffix)
+            output_str += f' newest_age_{THRESHOLD_SUFFIX_LABEL[suffix]}={converted_time}'
     print(output_str)
     sys.exit(exit_code)
-
-
-def parse_threshold(threshold):
-    """ Returns milliseconds to use for threshold.
-    Calculates time based on supported suffixes unless value is purely numerical.
-    """
-    try:
-        return float(threshold)
-    except ValueError:
-        try:
-            raw_millis = float(threshold[:-1])
-            suffix = threshold[-1]
-            if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
-                return raw_millis * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
-            print(f'Unexpected duration in threshold: {suffix}.'
-                  f' Complete threshold: {threshold}')
-            sys.exit(STATUS_CRITICAL)
-        except ValueError:
-            print(f'Invalid warning or critical threshold: {threshold}')
-            sys.exit(STATUS_CRITICAL)
 
 
 def parse_args():
@@ -241,11 +275,11 @@ def parse_args():
                         default='',
                         help='subfolder')
     parser.add_argument('-w', '--warning', type=str,
-                        dest='warning',
+                        dest='warning_threshold_arg',
                         required=True,
                         help='warning time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-c', '--critical', type=str,
-                        dest='critical',
+                        dest='critical_threshold_arg',
                         required=True,
                         help='critical time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-r', '--repository', type=str,
@@ -272,14 +306,59 @@ def parse_args():
                         action='store_true',
                         help='Do not verify SSL certificate and hide warnings')
     args = parser.parse_args()
-    args.warning = parse_threshold(str(args.warning))
-    args.critical = parse_threshold(str(args.critical))
-    if args.warning > args.critical:
+    warn_ms, warn_threshold = get_threshold(args.warning_threshold_arg)
+    crit_ms, crit_threshold = get_threshold(args.critical_threshold_arg)
+    if warn_threshold != crit_threshold:
+        # This is not entirely necessary, but simplifies.
+        #   If there is a use-case for having these be different units, please open an Issue
+        print('Warning and critical threshold suffixes must be the same')
+        sys.exit(STATUS_UNKNOWN)
+    if warn_ms > crit_ms:
         print('Warning must be less than critical')
         sys.exit(STATUS_CRITICAL)
+    args.warning_ms = warn_ms
+    args.critical_ms = crit_ms
+    args.threshold_suffix = warn_threshold
     if args.subfolder and not args.subfolder.endswith('/'):
         args.subfolder += '/'
     return args
+
+
+def get_threshold(arg_value):
+    """Get threshold value in millis and suffix from argument
+    """
+    try:
+        # the default is ms, attempt to convert the value
+        return convert_to_millis(int(arg_value), THRESHOLD_SUFFIX_MILLIS), THRESHOLD_SUFFIX_MILLIS
+    except ValueError:
+        try:
+            raw_time = float(arg_value[:-1])
+            suffix = arg_value[-1]
+            return convert_to_millis(raw_time, suffix, arg_value=arg_value), suffix
+        except ValueError:
+            print(f'Threshold is not numeric or uses an invalid suffix: {arg_value}')
+            sys.exit(STATUS_UNKNOWN)
+
+
+def convert_to_millis(raw_time, suffix, arg_value=None):
+    """Convert raw time and suffix to milliseconds
+    """
+    if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
+        return raw_time * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
+    error_message = f'Unexpected suffix in threshold: {suffix}.'
+    if arg_value:
+        error_message += f' Complete threshold argument: {arg_value}'
+    print(error_message)
+    sys.exit(STATUS_UNKNOWN)
+
+
+def convert_from_millis(time_ms, suffix):
+    """Convert milliseconds to unit provided as suffix
+    """
+    if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
+        return time_ms / THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
+    print(f'Unexpected suffix in threshold: {suffix}.')
+    sys.exit(STATUS_UNKNOWN)
 
 
 if __name__ == '__main__':
