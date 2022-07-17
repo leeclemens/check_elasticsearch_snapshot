@@ -65,6 +65,7 @@ def run(args):
     newest_snapshot_date = None
     perf_newest_snapshot_millis = sys.maxsize
     repositories = [args.repository] if args.repository else []
+    disable_urllib3_warnings(args.insecure)
     if not repositories:
         for repository in query(args, '_snapshot/_all'):
             repositories.append(repository)
@@ -94,21 +95,26 @@ def run(args):
                         return_status)
 
 
+def disable_urllib3_warnings(insecure):
+    """Disable urllib3 warnings if explicitly requested to do so
+    """
+    if insecure:
+        # pylint: disable=import-outside-toplevel
+        import urllib3
+        from urllib3.exceptions import InsecureRequestWarning
+        try:
+            urllib3.disable_warnings(InsecureRequestWarning)
+        except ImportError:
+            # noinspection PyUnusedLocal
+            urllib3 = None
+            print('Failed to import urllib3 or requests.packages.urllib3')
+
+
 def query(args, qry):
     """Query server for snapshots
     """
     # pylint: disable=broad-except
     try:
-        if args.insecure:
-            # pylint: disable=import-outside-toplevel
-            import urllib3
-            from urllib3.exceptions import InsecureRequestWarning
-            try:
-                urllib3.disable_warnings(InsecureRequestWarning)
-            except ImportError:
-                # noinspection PyUnusedLocal
-                urllib3 = None
-                print('Failed to import urllib3 or requests.packages.urllib3')
         req = requests.get(f'{args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}',
                            auth=(args.username, args.password),
                            verify=not args.insecure)
