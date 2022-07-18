@@ -1,13 +1,22 @@
-# check_elasticsearch_snapshot
+# Check Elasticsearch Snapshot
 
-[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
-[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![License](https://img.shields.io/github/license/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
+[![Current Version](https://img.shields.io/github/v/tag/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
+[![Issues](https://img.shields.io/github/issues-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/issues?q=is%3Aopen+is%3Aissue)
+[![Pull Requests](https://img.shields.io/github/issues-pr-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls?q=is%3Aopen+is%3Apr)
 
-Check Elasticsearch Snapshot
+[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Master Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/master?style=for-the-badge&label=master:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=master)
+
+[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/develop?style=for-the-badge&label=develop:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=develop)
+
+## Description
 
 A basic Nagios/Icinga plugin to check the status and age of an Elasticsearch snapshot.
 
-By default, all Snapshots are checked for status and age. You can also specify a specific repository to check.
+By default, all Snapshots are checked for status and age.
+You can also specify a specific repository to check.
 
 ## Installation
 
@@ -15,9 +24,9 @@ By default, all Snapshots are checked for status and age. You can also specify a
 
 * Python 3.6+
 * Python requests package
-    * pip install requests
-    * RedHat/CentOS
-        * python36-requests.noarch
+  * pip install requests
+  * RedHat/CentOS
+    * python36-requests.noarch
 
 ### Plugin Installation
 
@@ -62,7 +71,9 @@ check_elasticsearch_snapshot -s localhost -p 9200 -w 2.1d -c 7.5d -r my_backups
 1. Fork the repo
 2. Create a new feature branch
 3. Make your edits, commit and push
-4. Create a [Pull Request](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls) against the develop branch
+4. Create a [Pull Request](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls)
+against the develop branch
 
-Or create an [Issue](https://github.com/leeclemens/check_elasticsearch_snapshot/issues) to report a bug or feature
+Or create an [Issue](https://github.com/leeclemens/check_elasticsearch_snapshot/issues)
+to report a bug or feature
 request

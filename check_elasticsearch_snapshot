@@ -29,6 +29,8 @@ import argparse
 import sys
 import time
 import traceback
+from typing import Tuple
+from typing import Optional
 
 import requests
 
@@ -47,109 +49,216 @@ PREFIXES = {
 ES_SNAPSHOT_STATE_SUCCESS = 'SUCCESS'
 ES_SNAPSHOT_STATE_PARTIAL = 'PARTIAL'
 
+# Only used internally and as the default, but never as an argument
+THRESHOLD_SUFFIX_MILLIS = 'ms'
+# These are supported from the argument (one character)
+THRESHOLD_SUFFIX_SECONDS = 's'
+THRESHOLD_SUFFIX_MINUTES = 'm'
+THRESHOLD_SUFFIX_HOURS = 'h'
+THRESHOLD_SUFFIX_DAYS = 'd'
+THRESHOLD_SUFFIX_WEEKS = 'w'
+
 THRESHOLD_SUFFIX_MULTIPLIERS = {
-    'w': 7 * 24 * 60 * 60 * 1000,
-    'd': 24 * 60 * 60 * 1000,
-    'h': 60 * 60 * 1000,
-    'm': 60 * 1000,
-    's': 1000,
+    THRESHOLD_SUFFIX_WEEKS: 7 * 24 * 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_DAYS: 24 * 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_HOURS: 60 * 60 * 1000,
+    THRESHOLD_SUFFIX_MINUTES: 60 * 1000,
+    THRESHOLD_SUFFIX_SECONDS: 1000,
+    THRESHOLD_SUFFIX_MILLIS: 1,
 }
 
+THRESHOLD_SUFFIX_LABEL = {
+    THRESHOLD_SUFFIX_WEEKS: 'weeks',
+    THRESHOLD_SUFFIX_DAYS: 'days',
+    THRESHOLD_SUFFIX_HOURS: 'hours',
+    THRESHOLD_SUFFIX_MINUTES: 'minutes',
+    THRESHOLD_SUFFIX_SECONDS: 'seconds',
+    THRESHOLD_SUFFIX_MILLIS: 'millis',
+}
 
-def run(args):
+DEFAULT_PERF_THRESHOLD_SUFFIXES = [THRESHOLD_SUFFIX_SECONDS,
+                                   THRESHOLD_SUFFIX_DAYS]
+
+
+class SnapshotInfo:
+    """Class to retain information about the latest snapshot
+    """
+
+    def __init__(self,
+                 repository: Optional[str], snap_name: Optional[str],
+                 snap_date: Optional[str], snap_ms: Optional[int]) -> None:
+        """Initialize default snapshot information
+        """
+        self.__repository = repository
+        self.__snap_name = snap_name
+        self.snap_date = snap_date
+        self.snap_ms = snap_ms
+
+    @property
+    def repository(self) -> str:
+        """The repository which stores the snapshot
+        """
+        return self.__repository
+
+    @repository.setter
+    def repository(self, value: str) -> None:
+        """Set the repository storing the snapshot
+        """
+        self.__repository = value
+
+    @property
+    def snap_name(self) -> str:
+        """Get the snapshot name
+        """
+        return self.__snap_name
+
+    @snap_name.setter
+    def snap_name(self, value: str) -> None:
+        """Set the snapshot name
+        """
+        self.__snap_name = value
+
+
+class SnapshotQueryInfo:
+    """Information for querying snapshot info via ES API
+    """
+
+    def __init__(self, scheme: str, server: str, port: int, subfolder: str,
+                 username: str, password: str, insecure: bool) -> None:
+        """Snapshot Query Information used for querying snapshot data
+        """
+        self.__scheme = scheme
+        self.__server = server
+        self.__port = port
+        self.__subfolder = subfolder
+        self.__username = username
+        self.__password = password
+        self.__insecure = insecure
+
+    @property
+    def scheme(self) -> str:
+        """The scheme
+        """
+        return self.__scheme
+
+    @property
+    def server(self) -> str:
+        """The server
+        """
+        return self.__server
+
+    @property
+    def port(self) -> int:
+        """The port
+        """
+        return self.__port
+
+    @property
+    def subfolder(self) -> str:
+        """The subfolder
+        """
+        return self.__subfolder
+
+    @property
+    def username(self) -> str:
+        """The username
+        """
+        return self.__username
+
+    @property
+    def password(self) -> str:
+        """The password
+        """
+        return self.__password
+
+    @property
+    def insecure(self) -> bool:
+        """Require https
+        """
+        return self.__insecure
+
+
+def run(args: argparse.Namespace) -> None:
     """Main run function to execute this check
     """
+    print(type(args))
     return_status = STATUS_OK
-    newest_repository = None
-    newest_snapshot_name = None
-    newest_snapshot_date = None
-    perf_newest_snapshot_millis = sys.maxsize
+    query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
+                                   args.subfolder,
+                                   args.username, args.password,
+                                   args.insecure)
+    newest_snapshot_info = SnapshotInfo(None, None, None, sys.maxsize)
     repositories = [args.repository] if args.repository else []
+    disable_urllib3_warnings(args.insecure)
     if not repositories:
-        for repository in query(args, '_snapshot/_all'):
+        for repository in query(query_info, '_snapshot/_all'):
             repositories.append(repository)
-    now = time.time() * 1000
+    now_ms = time.time() * 1000
+
     for repository in repositories:
         (repo_status,
          repo_newest_snapshot_millis,
          repo_newest_snapshot_name,
-         repo_newest_snapshot_date) = check_repository_status(args,
-                                                              repository,
-                                                              now)
+         repo_newest_snapshot_date) = check_repository_status(
+            query_info,
+            args.snap_name, args.allow_partial,
+            args.warning_ms, args.critical_ms,
+            repository, now_ms)
         if repo_status > return_status:
             return_status = repo_status
         if (repo_newest_snapshot_millis is not None
-                and 0
-                < repo_newest_snapshot_millis
-                < perf_newest_snapshot_millis):
-            newest_repository = repository
-            perf_newest_snapshot_millis = repo_newest_snapshot_millis
-            newest_snapshot_name = repo_newest_snapshot_name
-            newest_snapshot_date = repo_newest_snapshot_date
+                and (0
+                     < repo_newest_snapshot_millis
+                     < newest_snapshot_info.snap_ms)):
+            newest_snapshot_info.repository = repository
+            newest_snapshot_info.snap_name = repo_newest_snapshot_name
+            newest_snapshot_info.snap_date = repo_newest_snapshot_date
+            newest_snapshot_info.snap_ms = repo_newest_snapshot_millis
 
-    exit_with_perf_data(newest_repository,
-                        newest_snapshot_name,
-                        newest_snapshot_date,
-                        now - perf_newest_snapshot_millis,
+    perf_newest_age_ms = now_ms - newest_snapshot_info.snap_ms
+    exit_with_perf_data(args.threshold_suffix,
+                        newest_snapshot_info,
+                        perf_newest_age_ms,
                         return_status)
 
 
-def query(args, qry):
-    """Query server for snapshots
+def disable_urllib3_warnings(insecure: bool) -> None:
+    """Disable urllib3 warnings if explicitly requested to do so
     """
-    # pylint: disable=broad-except
-    try:
-        if args.insecure:
-            try:
-                # noinspection PyPackageRequirements,PyUnresolvedReferences
-                # pylint: disable=import-outside-toplevel
-                import urllib3
-                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            except ImportError:
-                # noinspection PyUnusedLocal
-                urllib3 = None
-                print('Failed to import urllib3 or requests.packages.urllib3')
-        req = requests.get(f'{args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}',
-                           auth=(args.username, args.password),
-                           verify=not args.insecure)
-        if req.status_code == 200:
-            return req.json()
-        print(f'Failed to query: {args.scheme}://{args.server}:{args.port}/{args.subfolder}{qry}.'
-              f' Status Code: {req.status_code}')
-    except requests.exceptions.ConnectionError as conn_error:
-        print(f'Connection Error: {conn_error}')
-    except Exception as exc:
-        print(f'Unhandled Exception: {exc}')
-    sys.exit(STATUS_CRITICAL)
+    if insecure:
+        # pylint: disable=import-outside-toplevel
+        import urllib3
+        from urllib3.exceptions import InsecureRequestWarning
+        try:
+            urllib3.disable_warnings(InsecureRequestWarning)
+        except ImportError:
+            # noinspection PyUnusedLocal
+            urllib3 = None
+            print('Failed to import urllib3 or requests.packages.urllib3')
 
 
-def check_status(args, newest_snapshot_time, now):
-    """Evaluate the status of the snapshot time against provided thresholds
-    """
-    if now - newest_snapshot_time >= args.critical:
-        return STATUS_CRITICAL
-    if now - newest_snapshot_time >= args.warning:
-        return STATUS_WARNING
-    return STATUS_OK
-
-
-def check_repository_status(args, repository, now):
+def check_repository_status(query_info: SnapshotQueryInfo,
+                            snap_name: str, allow_partial: bool,
+                            warning_ms: float, critical_ms: float,
+                            repository: str, now_ms: float) \
+        -> Tuple[int, Optional[int], Optional[str], Optional[str]]:
     """Evaluate the status of the snapshots for SUCCESS
     """
     newest_snapshot_time = 0
     newest_snapshot_name = None
     newest_snapshot_date = None
-    for snapshot in query(
-            args,
-            f'_snapshot/{repository}/{args.snap_name}')['snapshots']:
+    for snapshot in query(query_info,
+                          f'_snapshot/{repository}/{snap_name}')['snapshots']:
         if ((snapshot['state'] == ES_SNAPSHOT_STATE_SUCCESS
-             or (args.allow_partial and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
+             or (allow_partial
+                 and snapshot['state'] == ES_SNAPSHOT_STATE_PARTIAL))
                 and snapshot['end_time_in_millis'] > newest_snapshot_time):
             newest_snapshot_time = snapshot['end_time_in_millis']
             newest_snapshot_name = snapshot['snapshot']
             newest_snapshot_date = snapshot['end_time']
     if newest_snapshot_name:
-        status = check_status(args, newest_snapshot_time, now)
+        status = check_status(warning_ms, critical_ms,
+                              newest_snapshot_time, now_ms)
         return (status,
                 newest_snapshot_time,
                 newest_snapshot_name,
@@ -158,46 +267,66 @@ def check_repository_status(args, repository, now):
     return STATUS_UNKNOWN, None, None, None
 
 
-def exit_with_perf_data(newest_repository,
-                        newest_snapshot_name,
-                        newest_snapshot_date,
-                        perf_newest_millis,
-                        exit_code):
+def query(query_info: SnapshotQueryInfo, qry: str) -> dict:
+    """Query server for snapshots
+    """
+    # pylint: disable=broad-except
+    try:
+        req = requests.get(
+            f'{query_info.scheme}://{query_info.server}:{query_info.port}'
+            f'/{query_info.subfolder}{qry}',
+            auth=(query_info.username, query_info.password),
+            verify=not query_info.insecure)
+        if req.status_code == 200:
+            return req.json()
+        print(f'Failed to query:'
+              f' {query_info.scheme}://{query_info.server}:{query_info.port}'
+              f'/{query_info.subfolder}{qry}.'
+              f' Status Code: {req.status_code}')
+    except requests.exceptions.ConnectionError as conn_error:
+        print(f'Connection Error: {conn_error}')
+    except Exception as exc:
+        print(f'Unhandled Exception: {exc}')
+    sys.exit(STATUS_CRITICAL)
+
+
+def check_status(warning_ms: float, critical_ms: float,
+                 newest_snapshot_ms: int, now_ms: float) -> int:
+    """Evaluate the status of the snapshot time against provided thresholds
+    """
+    if now_ms - newest_snapshot_ms >= critical_ms:
+        return STATUS_CRITICAL
+    if now_ms - newest_snapshot_ms >= warning_ms:
+        return STATUS_WARNING
+    return STATUS_OK
+
+
+def exit_with_perf_data(threshold_suffix: str,
+                        newest_snapshot_info: SnapshotInfo,
+                        perf_newest_age_ms: float,
+                        exit_code: int) -> None:
     """Print result with perf data and exit
     """
-    perf_newest_seconds = perf_newest_millis / 1000
-    perf_newest_days = perf_newest_seconds / 60 / 60 / 24
     output_str = (f'{PREFIXES[exit_code]}'
                   f' - Most current Repository/Snapshot:'
-                  f' {newest_repository}/{newest_snapshot_name} {newest_snapshot_date}')
-    if newest_snapshot_name:
-        output_str += (f' | newest_age_seconds={perf_newest_seconds}'
-                       f' newest_age_days={perf_newest_days}')
+                  f' {newest_snapshot_info.repository}'
+                  f'/{newest_snapshot_info.snap_name}'
+                  f' {newest_snapshot_info.snap_date}')
+    if newest_snapshot_info.snap_name:
+        output_str += ' |'
+        perf_units = DEFAULT_PERF_THRESHOLD_SUFFIXES
+        # Only add new threshold suffix if it's not one of the defaults
+        if threshold_suffix not in perf_units:
+            perf_units.append(threshold_suffix)
+        for suffix in threshold_suffix:
+            converted_time = convert_from_millis(perf_newest_age_ms, suffix)
+            output_str += (f' newest_age_{THRESHOLD_SUFFIX_LABEL[suffix]}'
+                           f'={converted_time}')
     print(output_str)
     sys.exit(exit_code)
 
 
-def parse_threshold(threshold):
-    """ Returns milliseconds to use for threshold.
-    Calculates time based on supported suffixes unless value is purely numerical.
-    """
-    try:
-        return float(threshold)
-    except ValueError:
-        try:
-            raw_millis = float(threshold[:-1])
-            suffix = threshold[-1]
-            if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
-                return raw_millis * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
-            print(f'Unexpected duration in threshold: {suffix}.'
-                  f' Complete threshold: {threshold}')
-            sys.exit(STATUS_CRITICAL)
-        except ValueError:
-            print(f'Invalid warning or critical threshold: {threshold}')
-            sys.exit(STATUS_CRITICAL)
-
-
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments
     """
     parser = argparse.ArgumentParser(
@@ -211,10 +340,12 @@ def parse_args():
                         help='scheme (http/https defaults to http)')
     parser.add_argument('-s', '--server', type=str,
                         required=True,
+                        default='localhost',
                         dest='server',
                         help='server')
     parser.add_argument('-p', '--port', type=int,
                         required=True,
+                        default=9200,
                         dest='port',
                         help='port')
     parser.add_argument('--username', type=str,
@@ -233,11 +364,11 @@ def parse_args():
                         default='',
                         help='subfolder')
     parser.add_argument('-w', '--warning', type=str,
-                        dest='warning',
+                        dest='warning_threshold_arg',
                         required=True,
                         help='warning time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-c', '--critical', type=str,
-                        dest='critical',
+                        dest='critical_threshold_arg',
                         required=True,
                         help='critical time (ms or suffixed with {s,m,h,d,w})')
     parser.add_argument('-r', '--repository', type=str,
@@ -264,14 +395,64 @@ def parse_args():
                         action='store_true',
                         help='Do not verify SSL certificate and hide warnings')
     args = parser.parse_args()
-    args.warning = parse_threshold(str(args.warning))
-    args.critical = parse_threshold(str(args.critical))
-    if args.warning > args.critical:
+    warn_ms, warn_threshold = get_threshold(args.warning_threshold_arg)
+    crit_ms, crit_threshold = get_threshold(args.critical_threshold_arg)
+    if warn_threshold != crit_threshold:
+        # This is not entirely necessary, but simplifies.
+        #   If there is a use-case for having these be different units,
+        #     please open an Issue
+        print('Warning and critical threshold suffixes must be the same')
+        sys.exit(STATUS_UNKNOWN)
+    if warn_ms > crit_ms:
         print('Warning must be less than critical')
         sys.exit(STATUS_CRITICAL)
+    args.warning_ms = warn_ms
+    args.critical_ms = crit_ms
+    args.threshold_suffix = warn_threshold
     if args.subfolder and not args.subfolder.endswith('/'):
         args.subfolder += '/'
     return args
+
+
+def get_threshold(arg_value: str) -> Tuple[float, str]:
+    """Get threshold value in millis and suffix from argument
+    """
+    try:
+        # the default is ms, attempt to convert the value
+        return (convert_to_millis(float(arg_value), THRESHOLD_SUFFIX_MILLIS),
+                THRESHOLD_SUFFIX_MILLIS)
+    except ValueError:
+        try:
+            raw_time = float(arg_value[:-1])
+            suffix = arg_value[-1]
+            return (convert_to_millis(raw_time, suffix, arg_value=arg_value),
+                    suffix)
+        except ValueError:
+            print(f'Threshold is not numeric or uses an invalid suffix:'
+                  f' {arg_value}')
+            sys.exit(STATUS_UNKNOWN)
+
+
+def convert_to_millis(raw_time: float, suffix: str,
+                      arg_value: str = None) -> float:
+    """Convert raw time and suffix to milliseconds
+    """
+    if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
+        return float(raw_time * THRESHOLD_SUFFIX_MULTIPLIERS[suffix])
+    error_message = f'Unexpected suffix in threshold: {suffix}.'
+    if arg_value:
+        error_message += f' Complete threshold argument: {arg_value}'
+    print(error_message)
+    sys.exit(STATUS_UNKNOWN)
+
+
+def convert_from_millis(time_ms: float, suffix: str) -> float:
+    """Convert milliseconds to unit provided as suffix
+    """
+    if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
+        return float(time_ms / THRESHOLD_SUFFIX_MULTIPLIERS[suffix])
+    print(f'Unexpected suffix in threshold: {suffix}.')
+    sys.exit(STATUS_UNKNOWN)
 
 
 if __name__ == '__main__':
