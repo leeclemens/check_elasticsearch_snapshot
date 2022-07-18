@@ -1,7 +1,7 @@
 # Check Elasticsearch Snapshot
 
-[![License](https://img.shields.io/github/license/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
-[![Current Version](https://img.shields.io/github/v/tag/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)]()
+[![License](https://img.shields.io/github/license/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/blob/master/LICENSE)
+[![Current Version](https://img.shields.io/github/v/tag/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/tags)
 [![Issues](https://img.shields.io/github/issues-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/issues?q=is%3Aopen+is%3Aissue)
 [![Pull Requests](https://img.shields.io/github/issues-pr-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls?q=is%3Aopen+is%3Apr)
 
