@@ -29,6 +29,8 @@ import argparse
 import sys
 import time
 import traceback
+from typing import Tuple
+from typing import Optional
 
 import requests
 
@@ -82,7 +84,9 @@ class SnapshotInfo:
     """Class to retain information about the latest snapshot
     """
 
-    def __init__(self, repository, snap_name, snap_date, snap_ms):
+    def __init__(self,
+                 repository: Optional[str], snap_name: Optional[str],
+                 snap_date: Optional[str], snap_ms: Optional[int]) -> None:
         """Initialize default snapshot information
         """
         self.__repository = repository
@@ -91,25 +95,25 @@ class SnapshotInfo:
         self.snap_ms = snap_ms
 
     @property
-    def repository(self):
+    def repository(self) -> str:
         """The repository which stores the snapshot
         """
         return self.__repository
 
     @repository.setter
-    def repository(self, value):
+    def repository(self, value: str) -> None:
         """Set the repository storing the snapshot
         """
         self.__repository = value
 
     @property
-    def snap_name(self):
+    def snap_name(self) -> str:
         """Get the snapshot name
         """
         return self.__snap_name
 
     @snap_name.setter
-    def snap_name(self, value):
+    def snap_name(self, value: str) -> None:
         """Set the snapshot name
         """
         self.__snap_name = value
@@ -119,8 +123,8 @@ class SnapshotQueryInfo:
     """Information for querying snapshot info via ES API
     """
 
-    def __init__(self, scheme, server, port, subfolder,
-                 username, password, insecure):
+    def __init__(self, scheme: str, server: str, port: int, subfolder: str,
+                 username: str, password: str, insecure: bool) -> None:
         """Snapshot Query Information used for querying snapshot data
         """
         self.__scheme = scheme
@@ -132,51 +136,52 @@ class SnapshotQueryInfo:
         self.__insecure = insecure
 
     @property
-    def scheme(self):
+    def scheme(self) -> str:
         """The scheme
         """
         return self.__scheme
 
     @property
-    def server(self):
+    def server(self) -> str:
         """The server
         """
         return self.__server
 
     @property
-    def port(self):
+    def port(self) -> int:
         """The port
         """
         return self.__port
 
     @property
-    def subfolder(self):
+    def subfolder(self) -> str:
         """The subfolder
         """
         return self.__subfolder
 
     @property
-    def username(self):
+    def username(self) -> str:
         """The username
         """
         return self.__username
 
     @property
-    def password(self):
+    def password(self) -> str:
         """The password
         """
         return self.__password
 
     @property
-    def insecure(self):
+    def insecure(self) -> bool:
         """Require https
         """
         return self.__insecure
 
 
-def run(args):
+def run(args: argparse.Namespace) -> None:
     """Main run function to execute this check
     """
+    print(type(args))
     return_status = STATUS_OK
     query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
                                    args.subfolder,
@@ -217,7 +222,7 @@ def run(args):
                         return_status)
 
 
-def disable_urllib3_warnings(insecure):
+def disable_urllib3_warnings(insecure: bool) -> None:
     """Disable urllib3 warnings if explicitly requested to do so
     """
     if insecure:
@@ -232,10 +237,11 @@ def disable_urllib3_warnings(insecure):
             print('Failed to import urllib3 or requests.packages.urllib3')
 
 
-def check_repository_status(query_info,
-                            snap_name, allow_partial,
-                            warning_ms, critical_ms,
-                            repository, now_ms):
+def check_repository_status(query_info: SnapshotQueryInfo,
+                            snap_name: str, allow_partial: bool,
+                            warning_ms: float, critical_ms: float,
+                            repository: str, now_ms: float) \
+        -> Tuple[int, Optional[int], Optional[str], Optional[str]]:
     """Evaluate the status of the snapshots for SUCCESS
     """
     newest_snapshot_time = 0
@@ -261,7 +267,7 @@ def check_repository_status(query_info,
     return STATUS_UNKNOWN, None, None, None
 
 
-def query(query_info, qry):
+def query(query_info: SnapshotQueryInfo, qry: str) -> dict:
     """Query server for snapshots
     """
     # pylint: disable=broad-except
@@ -284,7 +290,8 @@ def query(query_info, qry):
     sys.exit(STATUS_CRITICAL)
 
 
-def check_status(warning_ms, critical_ms, newest_snapshot_ms, now_ms):
+def check_status(warning_ms: float, critical_ms: float,
+                 newest_snapshot_ms: int, now_ms: float) -> int:
     """Evaluate the status of the snapshot time against provided thresholds
     """
     if now_ms - newest_snapshot_ms >= critical_ms:
@@ -294,10 +301,10 @@ def check_status(warning_ms, critical_ms, newest_snapshot_ms, now_ms):
     return STATUS_OK
 
 
-def exit_with_perf_data(threshold_suffix,
-                        newest_snapshot_info,
-                        perf_newest_age_ms,
-                        exit_code):
+def exit_with_perf_data(threshold_suffix: str,
+                        newest_snapshot_info: SnapshotInfo,
+                        perf_newest_age_ms: float,
+                        exit_code: int) -> None:
     """Print result with perf data and exit
     """
     output_str = (f'{PREFIXES[exit_code]}'
@@ -319,7 +326,7 @@ def exit_with_perf_data(threshold_suffix,
     sys.exit(exit_code)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments
     """
     parser = argparse.ArgumentParser(
@@ -407,12 +414,12 @@ def parse_args():
     return args
 
 
-def get_threshold(arg_value):
+def get_threshold(arg_value: str) -> Tuple[float, str]:
     """Get threshold value in millis and suffix from argument
     """
     try:
         # the default is ms, attempt to convert the value
-        return (convert_to_millis(int(arg_value), THRESHOLD_SUFFIX_MILLIS),
+        return (convert_to_millis(float(arg_value), THRESHOLD_SUFFIX_MILLIS),
                 THRESHOLD_SUFFIX_MILLIS)
     except ValueError:
         try:
@@ -426,11 +433,12 @@ def get_threshold(arg_value):
             sys.exit(STATUS_UNKNOWN)
 
 
-def convert_to_millis(raw_time, suffix, arg_value=None):
+def convert_to_millis(raw_time: float, suffix: str,
+                      arg_value: str = None) -> float:
     """Convert raw time and suffix to milliseconds
     """
     if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
-        return raw_time * THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
+        return float(raw_time * THRESHOLD_SUFFIX_MULTIPLIERS[suffix])
     error_message = f'Unexpected suffix in threshold: {suffix}.'
     if arg_value:
         error_message += f' Complete threshold argument: {arg_value}'
@@ -438,11 +446,11 @@ def convert_to_millis(raw_time, suffix, arg_value=None):
     sys.exit(STATUS_UNKNOWN)
 
 
-def convert_from_millis(time_ms, suffix):
+def convert_from_millis(time_ms: float, suffix: str) -> float:
     """Convert milliseconds to unit provided as suffix
     """
     if suffix in THRESHOLD_SUFFIX_MULTIPLIERS:
-        return time_ms / THRESHOLD_SUFFIX_MULTIPLIERS[suffix]
+        return float(time_ms / THRESHOLD_SUFFIX_MULTIPLIERS[suffix])
     print(f'Unexpected suffix in threshold: {suffix}.')
     sys.exit(STATUS_UNKNOWN)
 
