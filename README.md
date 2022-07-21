@@ -5,10 +5,10 @@
 [![Issues](https://img.shields.io/github/issues-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/issues?q=is%3Aopen+is%3Aissue)
 [![Pull Requests](https://img.shields.io/github/issues-pr-raw/leeclemens/check_elasticsearch_snapshot?style=for-the-badge)](https://github.com/leeclemens/check_elasticsearch_snapshot/pulls?q=is%3Aopen+is%3Apr)
 
-[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Master Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/master?style=for-the-badge&label=master:build)](https://app.travis-ci.com/github/leeclemens/check_elasticsearch_snapshot)
 [![Master Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/master?style=for-the-badge&label=master:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=master)
 
-[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop:build)](https://travis-ci.com/leeclemens/check_elasticsearch_snapshot/branches)
+[![Develop Build Status](https://img.shields.io/travis/com/leeclemens/check_elasticsearch_snapshot/develop?style=for-the-badge&label=develop:build)](https://app.travis-ci.com/github/leeclemens/check_elasticsearch_snapshot)
 [![Develop Codacy](https://img.shields.io/codacy/grade/b6015d104d834369a7f8cd8ae9679dc8/develop?style=for-the-badge&label=develop:code%20quality)](https://app.codacy.com/gh/leeclemens/check_elasticsearch_snapshot/dashboard?branch=develop)
 
 ## Description
