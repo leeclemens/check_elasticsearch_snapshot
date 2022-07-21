@@ -181,7 +181,6 @@ class SnapshotQueryInfo:
 def run(args: argparse.Namespace) -> None:
     """Main run function to execute this check
     """
-    print(type(args))
     return_status = STATUS_OK
     query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
                                    args.subfolder,
@@ -314,11 +313,11 @@ def exit_with_perf_data(threshold_suffix: str,
                   f' {newest_snapshot_info.snap_date}')
     if newest_snapshot_info.snap_name:
         output_str += ' |'
-        perf_units = DEFAULT_PERF_THRESHOLD_SUFFIXES
+        perf_unit_suffixes = DEFAULT_PERF_THRESHOLD_SUFFIXES
         # Only add new threshold suffix if it's not one of the defaults
-        if threshold_suffix not in perf_units:
-            perf_units.append(threshold_suffix)
-        for suffix in threshold_suffix:
+        if threshold_suffix not in DEFAULT_PERF_THRESHOLD_SUFFIXES:
+            perf_unit_suffixes.append(threshold_suffix)
+        for suffix in perf_unit_suffixes:
             converted_time = convert_from_millis(perf_newest_age_ms, suffix)
             output_str += (f' newest_age_{THRESHOLD_SUFFIX_LABEL[suffix]}'
                            f'={converted_time}')
