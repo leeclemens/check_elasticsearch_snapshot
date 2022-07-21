@@ -181,7 +181,6 @@ class SnapshotQueryInfo:
 def run(args: argparse.Namespace) -> None:
     """Main run function to execute this check
     """
-    print(type(args))
     return_status = STATUS_OK
     query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
                                    args.subfolder,
