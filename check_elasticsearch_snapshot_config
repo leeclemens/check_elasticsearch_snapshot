@@ -21,6 +21,7 @@ object CheckCommand "elasticsearch_snapshot" {
 		"--insecure" = {
 			set_if = "$elasticsearch_snapshot_insecure$"
 		}
+		"--timeout" = "$elasticsearch_snapshot_timeout$"
 	}
 
 	vars.elasticsearch_snapshot_server = "localhost"
