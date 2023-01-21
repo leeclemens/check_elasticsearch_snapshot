@@ -25,10 +25,15 @@ before_install:
   - travis_retry pip install --upgrade pycodestyle
   - travis_retry pip install --upgrade pylint
   - travis_retry pip install --upgrade flake8-annotations
+  - travis_retry pip install --upgrade types-requests
+  - travis_retry pip install --upgrade mypy
+  # - travis_retry pip install --upgrade coverage
+  # - travis_retry pip install --upgrade coveralls
   - pip freeze
 
 
 script:
   - pycodestyle --max-line-length=100 --statistics check_elasticsearch_snapshot
+  - mypy check_elasticsearch_snapshot
   - pylint check_elasticsearch_snapshot
   - flake8 --ignore=ANN101,W503 --statistics check_elasticsearch_snapshot
