@@ -24,6 +24,8 @@ before_install:
   - travis_retry pip install -r requirements.txt
   - travis_retry pip install --upgrade pycodestyle
   - travis_retry pip install --upgrade pylint
+  - travis_retry pip install --upgrade types-requests
+  - travis_retry pip install --upgrade mypy
   # - travis_retry pip install --upgrade coverage
   # - travis_retry pip install --upgrade coveralls
   - pip freeze
@@ -31,4 +33,5 @@ before_install:
 
 script:
   - pycodestyle --max-line-length=100 --statistics check_elasticsearch_snapshot
+  - mypy check_elasticsearch_snapshot
   - pylint check_elasticsearch_snapshot
