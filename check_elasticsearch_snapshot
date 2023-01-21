@@ -124,7 +124,8 @@ class SnapshotQueryInfo:
     """
 
     def __init__(self, scheme: str, server: str, port: int, subfolder: str,
-                 username: str, password: str, insecure: bool) -> None:
+                 username: str, password: str, insecure: bool,
+                 timeout: float) -> None:
         """Snapshot Query Information used for querying snapshot data
         """
         self.__scheme = scheme
@@ -134,6 +135,7 @@ class SnapshotQueryInfo:
         self.__username = username
         self.__password = password
         self.__insecure = insecure
+        self.__timeout = timeout
 
     @property
     def scheme(self) -> str:
@@ -177,6 +179,12 @@ class SnapshotQueryInfo:
         """
         return self.__insecure
 
+    @property
+    def timeout(self) -> float:
+        """Request timeout
+        """
+        return self.__timeout
+
 
 def run(args: argparse.Namespace) -> None:
     """Main run function to execute this check
@@ -185,7 +193,8 @@ def run(args: argparse.Namespace) -> None:
     query_info = SnapshotQueryInfo(args.scheme, args.server, args.port,
                                    args.subfolder,
                                    args.username, args.password,
-                                   args.insecure)
+                                   args.insecure,
+                                   args.timeout)
     newest_snapshot_info = SnapshotInfo(None, None, None, sys.maxsize)
     repositories = [args.repository] if args.repository else []
     disable_urllib3_warnings(args.insecure)
@@ -275,7 +284,8 @@ def query(query_info: SnapshotQueryInfo, qry: str) -> dict:
             f'{query_info.scheme}://{query_info.server}:{query_info.port}'
             f'/{query_info.subfolder}{qry}',
             auth=(query_info.username, query_info.password),
-            verify=not query_info.insecure)
+            verify=not query_info.insecure,
+            timeout=query_info.timeout)
         if req.status_code == 200:
             return req.json()
         print(f'Failed to query:'
@@ -393,6 +403,11 @@ def parse_args() -> argparse.Namespace:
                         required=False,
                         action='store_true',
                         help='Do not verify SSL certificate and hide warnings')
+    parser.add_argument('--timeout', type=float,
+                        dest='timeout',
+                        default=300,
+                        required=False,
+                        help='Timeout for requests, in seconds')
     args = parser.parse_args()
     warn_ms, warn_threshold = get_threshold(args.warning_threshold_arg)
     crit_ms, crit_threshold = get_threshold(args.critical_threshold_arg)
